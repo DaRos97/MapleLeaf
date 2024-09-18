@@ -11,7 +11,7 @@ import sys
 
 nC = '6' if len(sys.argv)==1 else sys.argv[1]
 
-plot_PD = 1
+plot_PD = 0
 plot_val = 0 if plot_PD else 1
 n_ord = 6
 #
@@ -89,7 +89,7 @@ if not Path(res_fn).is_file():
                 for NN in range(nans,5):
                     Es[i,j,c,NN] = np.nan
     #
-    #np.save(res_fn,Es)
+    np.save(res_fn,Es)
 else:
     Es = np.load(res_fn)
 print("Finished computing")
@@ -130,6 +130,12 @@ if plot_PD:#Plot PD
                               )
 
     ax.legend(handles=legend_entries,loc='lower right',fontsize=20)
+
+    ax.set_title("Classical phase diagraf of $J_h-J_t-J_d$ maple leaf lattice",size=30)
+
+    ax.autoscale(enable=True, axis='x', tight=True)
+    ax.autoscale(enable=True, axis='y', tight=True)
+
     plt.show()
     exit()
 
@@ -151,6 +157,7 @@ if plot_val: #Plot energies
     fig.set_size_inches(25,10)
 
     nc = n_ord
+    nc = 6
 
     X,Y = np.meshgrid(Jds,Jts)
     label = ['E',r'$\theta$',r'$\theta_p$',r'$\phi$',r'$\phi_p$']
@@ -165,9 +172,10 @@ if plot_val: #Plot energies
     #Select values for which the nc order is GS
     aa = np.argmin(Es[:,:,:,0],axis=2)
     bb = np.where(ind!=nc)
-    for i in range(4):
+    for i in range(1,2):
         Es[bb[0],bb[1],nc,i] = np.nan   #Remove values where is not the GS
-        ax[i].plot_surface(X,Y,Es[:,:,nc,i].T,cmap=cm.coolwarm,linewidth=0,antialiased=False)
+        Es[bb[0],bb[1],nc,i+1] = np.nan   #Remove values where is not the GS
+        ax[i].plot_surface(X,Y,abs(Es[:,:,nc,i].T-Es[:,:,nc,i+1].T),cmap=cm.coolwarm,linewidth=0,antialiased=False)
         ax[i].set_title(label[i])
         ax[i].set_xlabel(r'$J_d$')
         ax[i].set_ylabel(r'$J_t$')
