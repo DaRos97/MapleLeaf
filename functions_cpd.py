@@ -113,13 +113,53 @@ E4s = [E_3NC2a,E_3NC2b,E_3NC2c,E_3NC2d]
 
 Eall = {
         '6': [E_FM, E_Neel, E_aC6,E_aK6,E_aC3,E_aK3,E_aC2,E_aK2, E_NC2,E_NK2,E_NC3,E_NK3],
-        '3': [E_FM, E_Neel, E_aA3, E_bA3, E_3NC9a, E_3NC9b, E_3NC2a,E_3NC2b,E_3NC2c,E_3NC2d],
+        '3': [E_FM, E_Neel, E_aA3, E_bA3, E_3NC9a, E_3NC9b, E_3NC2a],#,E_3NC2b,E_3NC2c,E_3NC2d],
         'all': [E_FM, E_Neel, E_aA3, E_bA3, E_3NC9a, E_3NC9b, E_3NC2a,E_3NC2b,E_3NC2c,E_3NC2d, E_aC6,E_aK6,E_aC3,E_aK3,E_aC2,E_aK2, E_NC2,E_NK2,E_NC3,E_NK3],
         }
 
 name_list = {
         '6': ['FM','Neel','aC6','aK6','aC3','aK3','aC2','aK2','NC2','NK2','NC3','NK3'],
-        '3': ['FM','Neel','aA3','bA3','3NC9a','3NC9b','3NC2a','3NC2b','3NC2c','3NC2d'],
+        '3': ['FM','Neel','aA3','bA3','Coplanar','3NC9b','Non-Coplanar Ico','Non-Coplanar nIco 1','Non-Coplanar nIco 2'],#,'3NC2b','3NC2c','3NC2d'],
         'all': ['FM','Neel','aA3','bA3','3NC9a','3NC9b','3NC2a','3NC2b','3NC2c','3NC2d','aC6','aK6','aC3','aK3','aC2','aK2','NC2','NK2','NC3','NK3']
         }
+
+def get_which_NonCoplanar(pars):
+    th,tp,ph,pp = pars
+    R3 = np.array([[0,0,1],[1,0,0],[0,1,0]])
+    S1 = np.array([np.sin(th)*np.cos(ph),np.sin(th)*np.sin(ph),np.cos(th)])
+    S2 = np.array([np.sin(tp)*np.cos(pp),np.sin(tp)*np.sin(pp),np.cos(tp)])
+    diff = [np.matmul(np.linalg.matrix_power(R3,i),S1)-S2 for i in range(3)]
+    summ = [np.matmul(np.linalg.matrix_power(R3,i),S1)+S2 for i in range(3)]
+    #
+    for i in range(3):
+        if (abs(diff[i])<1e-3).all():
+            return 0
+        elif (abs(summ[i])<1e-3).all():
+            if np.degrees(np.arccos(np.clip(np.dot(S1,np.matmul(R3,S1)), -1.0, 1.0))) < 90:
+                return 1
+            else:
+                return 2
+    return 0
+
+def get_machine(cwd):
+    """Selects the machine the code is running on by looking at the working directory. Supports local, hpc (baobab or yggdrasil) and mafalda.
+
+    Parameters
+    ----------
+    pwd : string
+        Result of os.pwd(), the working directory.
+
+    Returns
+    -------
+    string
+        An acronim for the computing machine.
+    """
+    if cwd[6:11] == 'dario':
+        return 'loc'
+    elif cwd[:20] == '/home/users/r/rossid':
+        return 'hpc'
+    elif cwd[:13] == '/users/rossid':
+        return 'maf'
+
+
 

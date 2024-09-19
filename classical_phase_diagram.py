@@ -7,11 +7,13 @@ import matplotlib.pyplot as plt
 plt.rcParams['text.usetex'] = True
 from matplotlib.lines import Line2D
 import functions_cpd as fs
-import sys
+import sys,os
+
+machine = fs.get_machine(os.getcwd())
 
 nC = '6' if len(sys.argv)==1 else sys.argv[1]
 
-plot_PD = 0
+plot_PD = 1
 plot_val = 0 if plot_PD else 1
 n_ord = 6
 #
@@ -20,7 +22,7 @@ II = 43
 JJ = 0
 #
 Jh = 1
-nn = 51
+nn = 101
 bound = 4
 ng = 0
 Jts = np.linspace(-bound,bound*ng,nn)
@@ -34,6 +36,7 @@ if not Path(res_fn).is_file():
     for i in range(nn):
         print(i)
         for j in range(nn):
+            print(j)
             args = (Jh, Jts[j], Jds[i])
             for c in range(len(fs.Eall[nC])):
                 if fs.Eall[nC][c] in fs.E0s:
@@ -61,29 +64,15 @@ if not Path(res_fn).is_file():
                         nans = 5
                         bounds = ((0,np.pi),(0,np.pi),(0,2*np.pi),(0,2*np.pi))
                     #
-                    if 0:
-                        Em = minimize(
-                            fun=fs.Eall[nC][c],
-                            x0=np.random.rand(nans-1)*np.pi,
-                            args=args,
-                            method='Nelder-Mead',
-                            bounds=bounds,
-                            options={
-                                    'disp':False,
-          #                          'fatol':1e-7,
-                                    'adaptive':False,
-                                    }
-                            )
-                    else:
-                        Em = d_e(
-                            fs.Eall[nC][c],
-                            args=args,
-                            tol=1e-4,
-                            popsize=15,
-                            bounds=bounds,
-                            polish=True,
-                            strategy='rand2bin'
-                            )
+                    Em = d_e(
+                        fs.Eall[nC][c],
+                        args=args,
+                        tol=1e-5,
+                        popsize=15,
+                        bounds=bounds,
+                        polish=True,
+                        strategy='rand2bin'
+                        )
                     Es[i,j,c,0] = Em.fun
                     Es[i,j,c,1:nans] = Em.x
                 for NN in range(nans,5):
@@ -93,6 +82,9 @@ if not Path(res_fn).is_file():
 else:
     Es = np.load(res_fn)
 print("Finished computing")
+
+if not machine=='loc':
+    exit()
 
 if plot_PD:#Plot PD
     cmap = plt.get_cmap('tab20')
@@ -106,16 +98,16 @@ if plot_PD:#Plot PD
 
     fig,ax = plt.subplots()
     fig.set_size_inches(20,15)
-
+    
+    marker = 's'
     for i in range(nn):
         for j in range(nn):
             ind = np.argmin(Es[i,j,:,0])
             lind = np.argwhere(abs(Es[i,j,:,0]-Es[i,j,ind,0])<1e-4)
             if len(lind)>1:
-                marker = '*'
                 ind = min(lind)[0]
-            else:
-                marker = 'o'
+            if ind >= 6:
+                ind = 6 + fs.get_which_NonCoplanar(Es[i,j,6,1:])
             ax.scatter(Jds[i],Jts[j],color=colors[ind],marker=marker,s=150)
 
     ax.set_xlabel(r"$J_d$",size=30)
@@ -124,7 +116,7 @@ if plot_PD:#Plot PD
     ax.yaxis.set_tick_params(labelsize=20)
 
     legend_entries = []
-    for i in range(len(fs.name_list[nC])):
+    for i in [0,1,4,6,7,8]:
         legend_entries.append( Line2D([0], [0], marker='o', color='w', label=fs.name_list[nC][i],
                               markerfacecolor=colors[i], markersize=15)
                               )
@@ -172,10 +164,22 @@ if plot_val: #Plot energies
     #Select values for which the nc order is GS
     aa = np.argmin(Es[:,:,:,0],axis=2)
     bb = np.where(ind!=nc)
-    for i in range(1,2):
-        Es[bb[0],bb[1],nc,i] = np.nan   #Remove values where is not the GS
-        Es[bb[0],bb[1],nc,i+1] = np.nan   #Remove values where is not the GS
-        ax[i].plot_surface(X,Y,abs(Es[:,:,nc,i].T-Es[:,:,nc,i+1].T),cmap=cm.coolwarm,linewidth=0,antialiased=False)
+    if 1:
+        Es[bb[0],bb[1],nc,1] = np.nan   #Remove values where is not the GS
+        Es[bb[0],bb[1],nc,3] = np.nan   #Remove values where is not the GS
+        th = Es[:,:,nc,1]
+        ph = Es[:,:,nc,3]
+        R3 = np.array([[0,0,1],[1,0,0],[0,1,0]])
+        psi = np.zeros((nn,nn))
+        for i in range(nn):
+            for j in range(nn):
+                S1 = np.array([np.sin(th[i,j])*np.cos(ph[i,j]),np.sin(th[i,j])*np.sin(ph[i,j]),np.cos(th[i,j])])
+                psi[i,j] = np.degrees(np.arccos(np.clip(np.dot(S1,np.matmul(R3,S1)), -1.0, 1.0)))
+    for i in range(3):
+        Es[bb[0],bb[1],nc+i,0] = np.nan   #Remove values where is not the GS
+        Es[bb[0],bb[1],nc+i+1,0] = np.nan   #Remove values where is not the GS
+        #
+        ax[i].plot_surface(X,Y,abs(Es[:,:,nc+i,0].T-Es[:,:,nc+i+1,0].T),cmap=cm.coolwarm,linewidth=0,antialiased=False)
         ax[i].set_title(label[i])
         ax[i].set_xlabel(r'$J_d$')
         ax[i].set_ylabel(r'$J_t$')
