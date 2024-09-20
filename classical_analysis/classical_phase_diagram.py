@@ -108,7 +108,7 @@ if plot_PD:#Plot PD
                 ind = min(lind)[0]
             if ind >= 6:
                 ind = 6 + fs.get_which_NonCoplanar(Es[i,j,6,1:])
-            ax.scatter(Jds[i],Jts[j],color=colors[ind],marker=marker,s=150)
+            ax.scatter(Jds[i],Jts[j],color=colors[ind],marker=marker,s=50)
 
     ax.set_xlabel(r"$J_d$",size=30)
     ax.set_ylabel(r"$J_t$",size=30)

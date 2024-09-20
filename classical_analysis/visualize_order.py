@@ -2,9 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 import functions_cpd as fs
+import functions_visual as fsv
 import sys
 from mpl_toolkits.mplot3d import Axes3D
-from matplotlib.patches import RegularPolygon
+from matplotlib.patches import RegularPolygon,Circle
+
 
 #chose order
 Jh = 1
@@ -15,10 +17,12 @@ Jts = np.linspace(-bound,bound*ng,nn)
 Jds = np.linspace(-bound,bound*ng,nn)
 
 nC = '3'
-I = -1
-J = -1
+I = 29    #5#12#29      #over 51
+J = 26    #40#25#26     #over 51
 n_ord = int(sys.argv[1])   #index of order
 name = fs.name_list[nC][n_ord]
+
+print("Order ",n_ord," at Jd=",Jds[I]," and Jt=",Jts[J])
 
 res_dn = 'results/'
 res_fn = res_dn + 'cp'+nC+'d_'+str(Jh)+'_'+str(nn)+'_'+str(Jts[0])+','+str(Jts[-1])+'_'+str(Jds[0])+','+str(Jds[-1])+'.npy'
@@ -39,87 +43,8 @@ lw = 0.5
 c = 'k'
 ls = 'solid'
 x = np.sqrt(3)/2
-#vertical lines
-for i in range(3):
-    ax.plot([i*3*x,i*3*x],[-i/2,5-i/2],color=c,ls=ls,lw=lw,zorder=0)
-    ax.plot([i*3*x,i*3*x],[7-i/2,8-i/2],color=c,ls=ls,lw=lw,zorder=0)
-    ax.plot([x*(1+i*3),x*(1+i*3)],[-1/2-i/2,3-1/2-i/2],color=c,ls=ls,lw=lw,zorder=0)
-    ax.plot([x*(1+i*3),x*(1+i*3)],[5-1/2-i/2,8-1/2-i/2],color=c,ls=ls,lw=lw,zorder=0)
-    ax.plot([x*(2+i*3),x*(2+i*3)],[-1-i/2,-i/2],color=c,ls=ls,lw=lw,zorder=0)
-    ax.plot([x*(2+i*3),x*(2+i*3)],[2-i/2,7-i/2],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([-x,-x],[2+1/2,7+1/2],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([9*x,9*x],[-1-1/2,4-1/2],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([-2*x,-2*x],[5,7],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([10*x,10*x],[-1,1],color=c,ls=ls,lw=lw,zorder=0)
-#diagonal negative lines
-ax.plot([0,2*x],[0,-1],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([0,5*x],[1,-1-1/2],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([-x,x],[2+1/2,1+1/2],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([3*x,8*x],[1/2,-2],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([-x,4*x],[3+1/2,1],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([6*x,9*x],[0,-1-1/2],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([-2*x,0],[5,4],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([2*x,7*x],[3,1/2],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([9*x,10*x],[-1/2,-1],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([-2*x,3*x],[6,3+1/2],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([5*x,10*x],[2+1/2,0],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([-2*x,-x],[7,6+1/2],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([x,6*x],[5+1/2,3],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([8*x,10*x],[2,1],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([-x,2*x],[7+1/2,6],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([4*x,9*x],[5,2+1/2],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([0,5*x],[8,5+1/2],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([7*x,9*x],[4+1/2,3+1/2],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([3*x,8*x],[7+1/2,5],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([6*x,8*x],[7,6],color=c,ls=ls,lw=lw,zorder=0)
-
-#diagonal positive lines
-ax.plot([8*x,10*x],[-2,-1],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([7*x,10*x],[-1-1/2,0],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([5*x,7*x],[-1-1/2,-1/2],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([9*x,10*x],[1/2,1],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([4*x,9*x],[-1,1+1/2],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([2*x,4*x],[-1,0],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([6*x,9*x],[1,2+1/2],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([x,6*x],[-1/2,2],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([8*x,9*x],[3,3+1/2],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([0,x],[0,1/2],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([3*x,8*x],[1+1/2,4],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([0,3*x],[1,2+1/2],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([5*x,8*x],[3+1/2,5],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([0,5*x],[2,4+1/2],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([7*x,8*x],[5+1/2,6],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([-x,0],[2+1/2,3],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([2*x,7*x],[4,6+1/2],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([-x,2*x],[3+1/2,5],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([4*x,6*x],[6,7],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([-x,4*x],[4+1/2,7],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([-2*x,-x],[5,5+1/2],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([x,3*x],[6+1/2,7+1/2],color=c,ls=ls,lw=lw,zorder=0)
-
-ax.plot([-2*x,x],[6,7+1/2],color=c,ls=ls,lw=lw,zorder=0)
-ax.plot([-2*x,0],[7,8],color=c,ls=ls,lw=lw,zorder=0)
-
+args = (x,lw,c,ls)
+fsv.plot_lattice(ax,*args)
 ax.axis('off')
 
 #Plot unit cell spins
@@ -143,14 +68,14 @@ if name in ['FM','Neel','aA3','bA3']:
     center_x,center_y = offset+T1+T2
     hexagon = RegularPolygon((center_x, center_y), numVertices=6, radius=1.5, orientation=0, color='gray',alpha=0.5,zorder=0) 
     ax.add_patch(hexagon)
-elif name in ['3NC2a','3NC2b','3NC2c','3NC2d']:
+elif name in ['Non-Coplanar Ico']:
     UC = 4
     for i in range(2):
         for j in range(2):
             center_x,center_y = offset+i*T1+j*T2
             hexagon = RegularPolygon((center_x, center_y), numVertices=6, radius=1.5, orientation=0, color='gray',alpha=0.5,zorder=0) 
             ax.add_patch(hexagon)
-elif name in ['3NC9a','3NC9b']:
+elif name in ['Coplanar']:
     UC = 9
     for i in range(3):
         for j in range(3):
@@ -170,15 +95,31 @@ y = np.sin(phi) * np.sin(theta)
 z = np.cos(phi)
 ax2.plot_surface(x, y, z, cmap='viridis', edgecolor='none',alpha=0.2)
 ax2.scatter(0,0,c='k',s=20,lw=0)
-#equator
+#Equator
 theta_equator = np.linspace(0, 2 * np.pi, 100)
 x_equator = np.cos(theta_equator)
 y_equator = np.sin(theta_equator)
 z_equator = np.zeros_like(theta_equator)
 ax2.plot(x_equator, y_equator, z_equator, color='k', linewidth=1)
-ax2.view_init(30,200)
+#Axis
+ax2.quiver(0,0,0,1,0,0, color='k',arrow_length_ratio=0.1,lw=1)
+ax2.quiver(0,0,0,0,1,0, color='k',arrow_length_ratio=0.1,lw=1)
+ax2.quiver(0,0,0,0,0,1, color='k',arrow_length_ratio=0.1,lw=1)
+ax2.text(1, 0, 0.1, r'$x$', color='k')
+ax2.text(0, 1, 0.1, r'$y$', color='k')
+ax2.text(0, 0, 1.1, r'$z$', color='k')
+#Colors
+cmap = plt.get_cmap('tab20')
+n_colors = cmap.N
+colors = [cmap(i/(n_colors-1)) for i in range(n_colors-1)]
+
+cmap2 = plt.get_cmap('tab20b')
+n_colors = cmap2.N
+for i in range(n_colors):
+    colors.append(cmap2(i/(n_colors-1)))
+#
 if name == 'FM':
-    c = 'b'
+    c = colors[0]
     for x in range(3):
         for y in range(3):
             off = offset+x*T1+y*T2
@@ -194,8 +135,10 @@ if name == 'FM':
     ax2.quiver(0, 0, 0, x_arrow, y_arrow, z_arrow, color=c, arrow_length_ratio=0.1, linewidth=3)
     #
     title = 'Ferromagnetic'
+    #View
+    ax2.view_init(30,50)
 elif name == 'Neel':
-    c = ['b','r']
+    c = colors[0:4:2]
     for x in range(3):
         for y in range(3):
             off = offset+x*T1+y*T2
@@ -212,9 +155,11 @@ elif name == 'Neel':
         ax2.quiver(0, 0, 0, x_arrow, y_arrow, z_arrow, color=c[i], arrow_length_ratio=0.1, linewidth=3)
     #
     title = 'Neel'
-elif name == '3NC9a':
-    c1 = ['b','r','g']
-    c2 = ['y','m','pink']
+    #View
+    ax2.view_init(30,50)
+elif name == 'Coplanar':
+    c1 = colors[:3]
+    c2 = colors[3:6]
     for x in range(3):
         for y in range(3):
             off = offset+x*T1+y*T2
@@ -242,10 +187,72 @@ elif name == '3NC9a':
     y_al = np.sin(theta_al)*0.5
     z_al = np.zeros_like(theta_al)
     ax2.plot(x_al, y_al, z_al, color='k', linewidth=1)
-    ax2.text(x_al[50], y_al[50], 0.1,r'$\alpha$', color='k')
+    ax2.text(x_al[50]+0.1, y_al[50]+0.1, 0,r'$\alpha$', color='k')
     
     #
-    title = 'Planar'
+    title = name
+    #View
+    ax2.view_init(30,50)
+elif name == 'Non-Coplanar Ico':
+    R3 = np.array([[0,0,1],[1,0,0],[0,1,0]])
+    Gx = np.array([[1,0,0],[0,-1,0],[0,0,-1]])
+    Gy = np.array([[-1,0,0],[0,1,0],[0,0,-1]])
+    th,tp,ph,pp = Es[I,J,n_ord,1:]
+    #Sphere arrows
+    S1 = np.array([np.sin(th)*np.cos(ph),np.sin(th)*np.sin(ph),np.cos(th)])
+    S2 = np.array([np.sin(tp)*np.cos(pp),np.sin(tp)*np.sin(pp),np.cos(tp)])
+    diff = [np.matmul(np.linalg.matrix_power(R3,i),S1)-S2 for i in range(3)]
+    summ = [np.matmul(np.linalg.matrix_power(R3,i),S1)+S2 for i in range(3)]
+    i0 = -1
+    title2 = ''
+    LW = 0
+    angle = np.degrees(np.arccos(np.clip(np.dot(S1,np.matmul(R3,S1)), -1.0, 1.0)))
+    for i in range(3):
+        if (abs(diff[i])<1e-3).all():
+            i0 = i
+            print("Spins related by a rotation on the 2 sublattices")
+            title2 = 'I'
+            LW = 0
+        elif (abs(summ[i])<1e-3).all():
+            i0 = i
+            print("Spins related by a rotation AND flip on the 2 sublattices")
+            title2 = 'II small' if angle < 90 else 'II big'
+            LW = 2
+    #
+    c1 = colors[:12]
+    if i0!=-1:
+        c2 = c1
+    else:
+        i0 = 0
+        c2 = colors[12:]
+    for x in range(2):
+        for y in range(2):
+            off = offset+x*T1+y*T2
+            for i in range(6):
+                color = c1[i//2+x*3+y*6] if i%2==0 else c2[((i-1)//2+i0)%3+x*3+y*6]
+                X = T1*i_UC[i][0] + T2*i_UC[i][1] + off
+                lw = LW if i%2==1 else 0
+                ax.scatter(X[0],X[1],color=color, linewidths=lw, edgecolors='k', marker=marker, s=size)
+            #
+            for i in range(3):
+                S = np.matmul(np.linalg.matrix_power(Gy,y),np.matmul(np.linalg.matrix_power(Gx,x),np.matmul(np.linalg.matrix_power(R3,i),S1)))
+                Sp = np.matmul(np.linalg.matrix_power(Gy,y),np.matmul(np.linalg.matrix_power(Gx,x),np.matmul(np.linalg.matrix_power(R3,i),S2)))
+                ax2.quiver(0, 0, 0, S[0], S[1], S[2], color=c1[i+x*3+y*6], arrow_length_ratio=0.1, linewidth=3)
+                if c2 != c1:
+                    ax2.quiver(0, 0, 0, Sp[0], Sp[1], Sp[2], color=c2[i], arrow_length_ratio=0.1, linewidth=3)
+    #
+    title = 'Non-Planar '+title2
+    #View
+    ax2.view_init(10,10)
+    if len(title2)>1:
+        ax3 = fig.add_subplot(4,6,23)
+        ax3.arrow(0,0,0,0.8,color='b',width=0.05,head_starts_at_zero=False)
+        ax3.arrow(1,1,0,-0.8,color='b',width=0.05,head_starts_at_zero=False)
+        circle = Circle((0,0.5),radius=0.6, fill=False, edgecolor='k',lw=2) 
+        ax3.add_patch(circle)
+        ax3.set_aspect('equal')
+        ax3.text(0.6,0.5,r'$=$',size=20)
+        ax3.axis('off')
 
 fig.suptitle(title+' order',size=20)
 
