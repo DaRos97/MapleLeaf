@@ -31,51 +31,55 @@ print("Computing order ",order," at position Jd=","{:.4f}".format(Jds[I])," and 
 """
 We start by defining the lattice
 """
-UC = 3  #number of unit cells (6 sites) in each lattice direction (better to have it commensurate with the order we are computing)
-nkx = 21   #number of k points in x,y
-nky = 21
+UC = 9  #number of unit cells (6 sites) in each lattice direction (better to have it commensurate with the order we are computing)
+nkx = 61   #number of k points in x,y
+nky = 61
 
-T = [1/2*np.array([3*np.sqrt(3),-1]),1/2*np.array([-np.sqrt(3),5])]
-B = []
-B.append(2*np.pi*np.array([T[1][1],-T[1][0]])/np.linalg.det(np.array([T[0],T[1]])))
-B.append(2*np.pi*np.array([-T[0][1],T[0][0]])/np.linalg.det(np.array([T[0],T[1]])))
 """
 Need to adapt the grid in momentum space to get the high symmetry points.
 """
-kxs = np.linspace(-np.linalg.norm(B[0]),np.linalg.norm(B[0]),nkx)
-kys = np.linspace(-np.linalg.norm(B[0]),np.linalg.norm(B[0]),nky)
+kxs = np.linspace(-np.linalg.norm(fs.b[0]),np.linalg.norm(fs.b[0]),nkx)
+kys = np.linspace(-np.linalg.norm(fs.b[0]),np.linalg.norm(fs.b[0]),nky)
 
 lattice = fs.lattice_functions[order](UC)
 
 """
 Here we compute the ssf
 """
-UC_positions = np.array([
-    [1,3],
-    [-2,1],
-    [-3,-2],
-    [-1,-3],
-    [2,-1],
-    [3,2]])/7
+UC_positions = np.array([   #in terms of t1,t2
+    [2,0],
+    [1,0],
+    [0,0],
+    [0,1],
+    [1,1],
+    [0,2]])
 SSFzz_fn = fs.get_ssf_fn('zz',order,Jds[I],Jts[J],UC,nkx)
 SSFxy_fn = fs.get_ssf_fn('xy',order,Jds[I],Jts[J],UC,nkx)
 if not Path(SSFzz_fn).is_file():
     SSFzz = np.zeros((nkx,nky),dtype=complex)
     SSFxy = np.zeros((nkx,nky),dtype=complex)
+    """
+    to parallelize this we need, for each k, a UC**2*6xUC**2*6 matrix of distances
+    """
+    distances = np.zeros((UC**2*6,UC**2*6,2))
+    prod_zz = np.zeros((UC**2*6,UC**2*6))
+    prod_xy = np.zeros((UC**2*6,UC**2*6))
+    for i in range(UC**2*6):
+        iUCx, iUCy, iUC = (i//6//UC, i//6%UC, i%6)
+        for j in range(UC**2*6):
+            jUCx, jUCy, jUC = (j//6//UC, j//6%UC, j%6)
+            distances[i,j] = fs.T[0]*(iUCx-jUCx) + fs.T[1]*(iUCy-jUCy) + np.dot(fs.t.T,(UC_positions[iUC] - UC_positions[jUC]))
+            prod_zz[i,j] = lattice[iUCx,iUCy,iUC,2]*lattice[jUCx,jUCy,jUC,2]
+            prod_xy[i,j] = (lattice[iUCx,iUCy,iUC,0]*lattice[jUCx,jUCy,jUC,0]+lattice[iUCx,iUCy,iUC,1]*lattice[jUCx,jUCy,jUC,1])
     for ik in tqdm(range(nkx*nky)):
         ikx = ik//nky
         iky = ik%nky
         k_ = np.array([kxs[ikx],kys[iky]])
-        for i in range(UC**2*6):
-            iUCx, iUCy, iUC = (i//6//UC, i//6%UC, i%6)
-            for j in range(UC**2*6):
-                jUCx, jUCy, jUC = (j//6//UC, j//6%UC, j%6)
-                #
-                distance = T[0]*(iUCx-jUCx) + T[1]*(iUCy-jUCy) + UC_positions[iUC] - UC_positions[jUC]
-                SSFzz[ikx,iky] += np.exp(-1j*np.dot(k_,distance))*lattice[iUCx,iUCy,iUC,2]*lattice[jUCx,jUCy,jUC,2]
-                SSFxy[ikx,iky] += np.exp(-1j*np.dot(k_,distance))*(lattice[iUCx,iUCy,iUC,0]*lattice[jUCx,jUCy,jUC,0]+lattice[iUCx,iUCy,iUC,1]*lattice[jUCx,jUCy,jUC,1])
-    np.save(SSFzz_fn,SSFzz)
-    np.save(SSFxy_fn,SSFxy)
+        SSFzz[ikx,iky] = np.sum(np.ravel(np.exp(-1j*np.dot(distances,k_))*prod_zz))
+        SSFxy[ikx,iky] = np.sum(np.ravel(np.exp(-1j*np.dot(distances,k_))*prod_xy))
+    if 1:
+        np.save(SSFzz_fn,SSFzz)
+        np.save(SSFxy_fn,SSFxy)
 else:
     SSFzz = np.load(SSFzz_fn)
     SSFxy = np.load(SSFxy_fn)
@@ -85,15 +89,11 @@ Finally we plot the result
 """
 fig = plt.figure(figsize=(20,14))
 ax1 = fig.add_subplot(1,2,1)
-
-####### Check this
-X,Y = np.meshgrid(kxs,kys)
-ax1.scatter(X,Y,c=np.real(SSFzz))
-
-
+fs.plot_ssf(SSFzz,kxs,kys,ax1,'SSF zz')
 ax2 = fig.add_subplot(1,2,2)
-ax2.scatter(X,Y,c=np.real(SSFxy))
+fs.plot_ssf(SSFxy,kxs,kys,ax2,'SSF xy')
 
+fig.tight_layout()
 plt.show()
 
 
