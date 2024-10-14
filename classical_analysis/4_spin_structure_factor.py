@@ -17,38 +17,26 @@ from datetime import timedelta
 """
 Chose the point to compute in the phase diagram
 """
-ind_order = 0 if len(sys.argv)<2 else int(sys.argv[1])
-Jh = 1
-nn = 51     #largest phase diagram computed so far
-bound = 4
-ng = 0
-Jds = np.linspace(-bound,bound*ng,nn)
-Jts = np.linspace(-bound,bound*ng,nn)
-
-nC = '3'
-I = 0    #5#12#29      #over 51
-J = 25    #40#25#26     #over 51
-order = fs_cpd.name_list[nC][ind_order]
-print("Computing order ",order," at position Jd=","{:.4f}".format(Jds[I])," and Jt=","{:.4f}".format(Jts[J]))
-alpha = 5*np.pi/6
-print("alpha: ",alpha)
-UC = 30  #number of unit cells (6 sites) in each lattice direction (better to have it commensurate with the order we are computing)
-lattice = fs.lattice_functions[order](UC,alpha)
+ind_choice = 0 if len(sys.argv)<2 else int(sys.argv[1])
+ind_order,args = fs.get_pars(ind_choice)
+exit()
+UC = 70  #number of unit cells (6 sites) in each lattice direction (better to have it commensurate with the order we are computing)
+lattice = fs.lattice_functions[order](UC,args)
 
 """
 We start by defining the lattice
 """
 
-high_symm = 'b'
-factors = {'B':(7,10),'b':(6,4)}
+high_symm = 'b'     #decide which high symmetry points to include in k-space, thise of the inner BZ (B) or of the external one (b)
+factors = {'B':(7,10),'b':(6,10)}    #Just how many units to consider 
 nkx, nky = fs.get_kpoints(factors[high_symm],150)
 print("Using ",UC,"x",UC," unit cells and ",nkx,"x",nky," momentum points")
 
 """
 Need to adapt the grid in momentum space to get the high symmetry points.
 """
-vecx = fs.B_[1,0] if high_symm=='B' else fs.b_[1,0]
-vecy = fs.B_[1,1]/3 if high_symm=='B' else fs.b_[1,1]/3
+vecx = np.pi*2/np.sqrt(21)#fs.B_[1,0] if high_symm=='B' else fs.b_[1,0]
+vecy = np.pi*2/3/np.sqrt(7)#fs.B_[1,1]/3 if high_symm=='B' else fs.b_[1,1]/3
 fx,fy = factors[high_symm]
 kxs = np.linspace(-vecx*fx,vecx*fx,nkx)
 kys = np.linspace(-vecy*fy,vecy*fy,nky)

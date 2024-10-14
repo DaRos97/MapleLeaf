@@ -141,6 +141,10 @@ def get_which_NonCoplanar(pars):
                 return 2
     return 0
 
+def get_res_cpd_fn(nC,Jh,nn,Jts,Jds):
+    res_dn = 'results/data_cpd/'
+    return res_dn + 'cp'+nC+'d_'+str(Jh)+'_'+str(nn)+'_'+str(Jts[0])+','+str(Jts[-1])+'_'+str(Jds[0])+','+str(Jds[-1])+'.npy'
+
 def get_machine(cwd):
     """Selects the machine the code is running on by looking at the working directory. Supports local, hpc (baobab or yggdrasil) and mafalda.
 

@@ -1,4 +1,37 @@
 import numpy as np
+import functions_cpd as fs_cpd
+
+def get_pars(ind):
+    """Here we give the parameters in the phase diagram for the different orders.
+    For FM and Neel not really needed.
+    We give: FM, Neel, 2 coplanars (close and far from ) and 3 non-coplanars (one for each region of the classical phase diagram)
+    """
+    l_order = [0,1,4,4,6,6,6]
+    l_I = [0,0,5,40,22,25,18]
+    l_J = [0,0,45,47,40,30,23]
+    ind_order = l_order[ind]
+    I = l_I[ind]
+    J = l_J[ind]
+    #
+    Jh = 1
+    nn = 51     #largest phase diagram computed so far
+    bound = 4
+    ng = 0
+    Jds = np.linspace(-bound,bound*ng,nn)
+    Jts = np.linspace(-bound,bound*ng,nn)
+
+    order = fs_cpd.name_list['3'][ind_order]
+    print("Computing spin structure factor of",order)
+    if ind_order>1:
+        print("Using parameters at position Jd=","{:.4f}".format(Jds[I])," and Jt=","{:.4f}".format(Jts[J]))
+        pars_fn = fs_cpd.get_res_cpd_fn('3',Jh,nn,Jts,Jds)
+        pars = np.load(pars_fn)
+        print(pars.shape)
+        args = (0,)
+        print("angle(s): ",args)
+    else:
+        args = (0,)
+    return order, args
 
 def R_z(theta):
     """
@@ -13,7 +46,7 @@ def R_z3(theta):
 def R_x3(theta):
     return np.array([[1,0,0],[0,np.cos(theta),-np.sin(theta)],[0,np.sin(theta),np.cos(theta)]])
 def R_y3(theta):
-    return np.array([[np.cos(theta),0,np.sin(theta)],[0,1,0][-np.sin(theta),0,np.cos(theta)]])
+    return np.array([[np.cos(theta),0,np.sin(theta)],[0,1,0],[-np.sin(theta),0,np.cos(theta)]])
 
 def get_reciprocal_vectors(a):
     """
@@ -33,7 +66,7 @@ Latice vectors and reciprocal vectors
 T_ = np.array([np.sqrt(7)*np.array([np.sqrt(3)/2,-1/2]),np.sqrt(7)*np.array([0,1])])
 B_ = get_reciprocal_vectors(T_)
 #
-t_ = np.array([1/np.sqrt(7)*np.array([np.sqrt(3)*3/2,-1/2]),1/np.sqrt(7)*np.array([np.sqrt(3),2])])
+t_ = np.array([1/np.sqrt(7)*np.array([np.sqrt(3),-2]),1/np.sqrt(7)*np.array([np.sqrt(3)*3/2,1/2])])
 b_ = get_reciprocal_vectors(t_)
 """
 Vertices of BZ and extended BZ
@@ -77,41 +110,39 @@ def Neel(UC,args):
     lattice[:,:,[0,2,5],2] = -1/2
     return lattice
 
-def coplanar(UC,alpha=np.pi/3):
+def coplanar(UC,args):
+    alpha = args
     lattice = np.zeros((UC,UC,6,3))
     s1 = np.array([1,0,0])
     s2 = np.matmul(R_z3(alpha),s1)
     for ix in range(UC):
         for iy in range(UC):
-            lattice[ix,iy,0] = np.matmul(R_z3(np.pi*2/3*(ix+iy)),s1)
-            lattice[ix,iy,2] = np.matmul(R_z3(np.pi*2/3*(ix+iy+1)),s1)
-            lattice[ix,iy,5] = np.matmul(R_z3(np.pi*2/3*(ix+iy+2)),s1)
+            lattice[ix,iy,0] = R_z3(np.pi*2/3*(ix+iy))@s1
+            lattice[ix,iy,2] = R_z3(np.pi*2/3*(ix+iy+1))@s1
+            lattice[ix,iy,5] = R_z3(np.pi*2/3*(ix+iy+2))@s1
             #
-            lattice[ix,iy,1] = np.matmul(R_z3(np.pi*2/3*(ix+iy)),s2)
-            lattice[ix,iy,3] = np.matmul(R_z3(np.pi*2/3*(ix+iy+1)),s2)
-            lattice[ix,iy,4] = np.matmul(R_z3(np.pi*2/3*(ix+iy+2)),s2)
+            lattice[ix,iy,1] = R_z3(np.pi*2/3*(ix+iy))@s2
+            lattice[ix,iy,3] = R_z3(np.pi*2/3*(ix+iy+1))@s2
+            lattice[ix,iy,4] = R_z3(np.pi*2/3*(ix+iy+2))@s2
     return lattice
 
-def noncoplanar_1(UC,theta=np.pi/3,phi=0):
+def noncoplanar_1(UC,args):
+    theta,phi = args
     lattice = np.zeros((UC,UC,6,3))
     s1 = np.array([np.sin(theta)*np.cos(phi),np.sin(theta)*np.sin(phi),np.cos(theta)])
-    GR = np.array([[0,0,1],[1,0,0],[0,1,0]])
+    GR1 = np.array([[0,0,1],[1,0,0],[0,1,0]])
+    GR2 = GR1@GR1
     for ix in range(UC):
         for iy in range(UC):
-            lattice[ix,iy,0] = np.matmul(R_y3(np.pi*iy),np.matmul(R_x3(np.pi*ix),s1))
-            lattice[ix,iy,1] = np.matmul(np.linalg.matrix_power(GR,2),lattice[ix,iy,0])
-            lattice[ix,iy,2] = np.matmul(R_y3(np.pi*iy+1),lattice[ix,iy,1])
-            lattice[ix,iy,3] = np.matmul(R_y3(np.pi*iy),np.matmul(,lattice[ix,iy,0]))
-            lattice[ix,iy,0] = np.matmul(R_x3(np.pi*ix),s1)
-            lattice[ix,iy,2] = np.matmul(R_z3(np.pi*2/3*(ix+iy+1)),s1)
-            lattice[ix,iy,5] = np.matmul(R_z3(np.pi*2/3*(ix+iy+2)),s1)
-            #
-            lattice[ix,iy,1] = np.matmul(R_z3(np.pi*2/3*(ix+iy)),s2)
-            lattice[ix,iy,3] = np.matmul(R_z3(np.pi*2/3*(ix+iy+1)),s2)
-            lattice[ix,iy,4] = np.matmul(R_z3(np.pi*2/3*(ix+iy+2)),s2)
+            lattice[ix,iy,0] = R_x3(np.pi*ix)@R_y3(np.pi*iy)@s1
+            lattice[ix,iy,1] = GR2@lattice[ix,iy,0]
+            lattice[ix,iy,2] = R_y3(np.pi)@lattice[ix,iy,1]
+            lattice[ix,iy,3] = R_y3(np.pi)@GR1@lattice[ix,iy,0]
+            lattice[ix,iy,4] = R_x3(np.pi)@R_y3(np.pi)@lattice[ix,iy,0]
+            lattice[ix,iy,5] = R_x3(np.pi)@lattice[ix,iy,3]
     return lattice
 
-lattice_functions = {'FM':FM,'Neel':Neel,'Coplanar':coplanar}
+lattice_functions = {'FM':FM,'Neel':Neel,'Coplanar':coplanar, 'Non-Coplanar Ico':noncoplanar_1}
 
 def get_spec_txt(order,Jd,Jt,UC,nkx):
     return order+'_'+"{:.4f}".format(Jd)+"{:.4f}".format(Jt)+'_'+str(UC)+'_'+str(nkx)

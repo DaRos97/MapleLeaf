@@ -28,8 +28,7 @@ ng = 0
 Jts = np.linspace(-bound,bound*ng,nn)
 Jds = np.linspace(-bound,bound*ng,nn)
 
-res_dn = 'results/'
-res_fn = res_dn + 'cp'+nC+'d_'+str(Jh)+'_'+str(nn)+'_'+str(Jts[0])+','+str(Jts[-1])+'_'+str(Jds[0])+','+str(Jds[-1])+'.npy'
+res_fn = fs.get_res_cpd_fn(nC,Jh,nn,Jts,Jds)
 
 if not Path(res_fn).is_file():
     Es = np.zeros((nn,nn,len(fs.Eall[nC]),5))
