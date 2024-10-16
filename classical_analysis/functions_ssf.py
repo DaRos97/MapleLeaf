@@ -26,12 +26,12 @@ def get_pars(ind):
         print("Using parameters at position Jd=","{:.4f}".format(Jds[I])," and Jt=","{:.4f}".format(Jts[J]))
         pars_fn = fs_cpd.get_res_cpd_fn('3',Jh,nn,Jts,Jds)
         pars = np.load(pars_fn)
-        print(pars.shape)
-        args = (0,)
+        args = pars[I,J,ind_order,1:]   #don't take the energy
+        args = args[~np.isnan(args)]    #remove nans
         print("angle(s): ",args)
     else:
         args = (0,)
-    return order, args
+    return order, args, Jds[I], Jts[J]
 
 def R_z(theta):
     """
@@ -111,10 +111,11 @@ def Neel(UC,args):
     return lattice
 
 def coplanar(UC,args):
-    alpha = args
+    th,tp,ph = args
     lattice = np.zeros((UC,UC,6,3))
-    s1 = np.array([1,0,0])
-    s2 = np.matmul(R_z3(alpha),s1)
+    s1 = np.array([np.sin(th)*np.cos(ph),np.sin(th)*np.sin(ph),np.cos(th)])
+    s2 = np.array([np.sin(tp),0,np.cos(tp)])
+#    s2 = np.matmul(R_z3(alpha),s1)
     for ix in range(UC):
         for iy in range(UC):
             lattice[ix,iy,0] = R_z3(np.pi*2/3*(ix+iy))@s1
@@ -127,41 +128,44 @@ def coplanar(UC,args):
     return lattice
 
 def noncoplanar_1(UC,args):
-    theta,phi = args
+    th,tp,ph,pp = args
     lattice = np.zeros((UC,UC,6,3))
-    s1 = np.array([np.sin(theta)*np.cos(phi),np.sin(theta)*np.sin(phi),np.cos(theta)])
+    s1 = np.array([np.sin(th)*np.cos(ph),np.sin(th)*np.sin(ph),np.cos(th)])
+    s2 = np.array([np.sin(tp)*np.cos(pp),np.sin(tp)*np.sin(pp),np.cos(tp)])
     GR1 = np.array([[0,0,1],[1,0,0],[0,1,0]])
     GR2 = GR1@GR1
     for ix in range(UC):
         for iy in range(UC):
             lattice[ix,iy,0] = R_x3(np.pi*ix)@R_y3(np.pi*iy)@s1
-            lattice[ix,iy,1] = GR2@lattice[ix,iy,0]
-            lattice[ix,iy,2] = R_y3(np.pi)@lattice[ix,iy,1]
-            lattice[ix,iy,3] = R_y3(np.pi)@GR1@lattice[ix,iy,0]
-            lattice[ix,iy,4] = R_x3(np.pi)@R_y3(np.pi)@lattice[ix,iy,0]
-            lattice[ix,iy,5] = R_x3(np.pi)@lattice[ix,iy,3]
+            lattice[ix,iy,2] = GR2@R_x3(np.pi*ix)@R_y3(np.pi*(iy+1))@s1
+            lattice[ix,iy,5] = GR1@R_x3(np.pi*(ix+1))@R_y3(np.pi*(iy+1))@s1
+            #
+            lattice[ix,iy,1] = R_x3(np.pi*ix)@R_y3(np.pi*iy)@s2
+            lattice[ix,iy,3] = GR2@R_x3(np.pi*ix)@R_y3(np.pi*(iy+1))@s2
+            lattice[ix,iy,4] = GR1@R_x3(np.pi*(ix+1))@R_y3(np.pi*(iy+1))@s2
     return lattice
 
 lattice_functions = {'FM':FM,'Neel':Neel,'Coplanar':coplanar, 'Non-Coplanar Ico':noncoplanar_1}
 
-def get_spec_txt(order,Jd,Jt,UC,nkx):
-    return order+'_'+"{:.4f}".format(Jd)+"{:.4f}".format(Jt)+'_'+str(UC)+'_'+str(nkx)
+def get_spec_txt(order,Jd,Jt,UC,nkx,nky):
+    return order+'_'+"{:.4f}".format(Jd)+"{:.4f}".format(Jt)+'_'+str(UC)+'_'+str(nkx)+'_'+str(nky)
 
-def get_ssf_fn(direction,order,Jd,Jt,UC,nkx):
-    return 'results/data_ssf/'+direction+'_'+get_spec_txt(order,Jd,Jt,UC,nkx)+'.npy'
+def get_ssf_fn(direction,order,Jd,Jt,UC,nkx,nky):
+    return 'results/data_ssf/'+direction+'_'+get_spec_txt(order,Jd,Jt,UC,nkx,nky)+'.npy'
 
 def plot_BZs(ax):
     #hexagons
+    lw = 0.5
     for i in range(6):
         ax.plot([vertices_BZ[i,0],vertices_BZ[(i+1)%6, 0]], [vertices_BZ[i,1],vertices_BZ[(i+1)%6, 1]],
                 color='k',
-                lw=2,
+                lw=lw,
                 ls='--',
                 zorder=2,
                )
         ax.plot([vertices_EBZ[i,0],vertices_EBZ[(i+1)%6, 0]], [vertices_EBZ[i,1],vertices_EBZ[(i+1)%6, 1]],
                 color='k',
-                lw=2,
+                lw=lw,
                 ls='--',
                 zorder=2,
                )
@@ -179,6 +183,15 @@ def get_kpoints(factors,max_k=100):
                 break
     return res
 
+def get_suptitle(order,args,Jd,Jt):
+    tt = ''
+    txt_ = [r'$\theta$',r'$\theta_p $',r'$\phi$',r'$\phi_p$']
+    for i in range(len(args)):
+        tt += txt_[i]+'='
+        tt += "{:.1f}".format(args[i]*180/np.pi) + "°"
+        if not i==len(args)-1:
+            tt += ', '
+    return order + ' at '+r'$J_d=$'+"{:.2f}".format(Jd)+', '+r'$J_t=$'+"{:.2f}".format(Jt)+': ' + tt
 
 
 

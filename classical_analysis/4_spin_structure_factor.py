@@ -14,15 +14,16 @@ import os,sys
 from time import time
 from datetime import timedelta
 
+save = True
+
 """
 Chose the point to compute in the phase diagram
 """
 ind_choice = 0 if len(sys.argv)<2 else int(sys.argv[1])
-ind_order,args = fs.get_pars(ind_choice)
-exit()
-UC = 70  #number of unit cells (6 sites) in each lattice direction (better to have it commensurate with the order we are computing)
+order,args, Jd, Jt = fs.get_pars(ind_choice)
+UC = 21 if len(sys.argv)<3 else int(sys.argv[2]) #number of unit cells (6 sites) in each lattice direction (better to have it commensurate with the order we are computing)
 lattice = fs.lattice_functions[order](UC,args)
-
+dic_UC_average = {'FM':1,'Neel':1,'Coplanar':3,'Non-Coplanar Ico':2}
 """
 We start by defining the lattice
 """
@@ -51,40 +52,45 @@ UC_positions = np.array([   #in terms of t1,t2
     [0,1],
     [1,1],
     [0,2]])
-SSFzz_fn = fs.get_ssf_fn('zz',order,Jds[I],Jts[J],UC,nkx)
-SSFxy_fn = fs.get_ssf_fn('xy',order,Jds[I],Jts[J],UC,nkx)
+SSFzz_fn = fs.get_ssf_fn('zz',order,Jd,Jt,UC,nkx,nky)
+SSFxy_fn = fs.get_ssf_fn('xy',order,Jd,Jt,UC,nkx,nky)
 if not Path(SSFzz_fn).is_file():
     time_initial = time()
     SSFzz = np.zeros((nkx,nky))
     SSFxy = np.zeros((nkx,nky))
     """
-    To parallelize this we need, for each k, a UC**2*6 vector of distances (we fix one position to be (UC//2,UC//2,0))
+    We fix one unit cell and sum over the 6 sites inside
     """
-    fUCx = UC//2
+    fUCx = UC//2    #fixed UC
     fUCy = UC//2
     #
-    distances = np.zeros((UC**2*6,2))
-    prod_zz = np.zeros(UC**2*6)
-    prod_xy = np.zeros(UC**2*6)
-    for fUC in range(6):
-        #Probably can be done faster
-        for i in range(UC**2*6):
-            iUCx, iUCy, iUC = (i//6//UC, i//6%UC, i%6)
-            distances[i] = fs.T_[0]*(iUCx-fUCx) + fs.T_[1]*(iUCy-fUCy) + np.dot(fs.t_.T,(UC_positions[iUC]-UC_positions[fUC]))
-            prod_zz[i] = lattice[iUCx,iUCy,iUC,2]*lattice[fUCx,fUCy,fUC,2]
-            prod_xy[i] = (lattice[iUCx,iUCy,iUC,0]*lattice[fUCx,fUCy,fUC,0]+lattice[iUCx,iUCy,iUC,1]*lattice[fUCx,fUCy,fUC,1])
-        """
-        We can create SSFzz in one shot by creating a matrix of kx,ky values and doing the dot product at once
-        """
-        X,Y = np.meshgrid(kxs,kys)
-        cos_kd = np.cos(np.einsum('ijm,km->ijk',np.dstack([X.T,Y.T]),distances))/2
-        SSFzz += np.sum(cos_kd*prod_zz, axis=2)
-        SSFxy += np.sum(cos_kd*prod_xy, axis=2)
-    SSFzz /= UC**2*6
-    SSFxy /= UC**2*6
+    for fff in range(dic_UC_average[order]**2):
+        fUCx = UC//2+fff%dic_UC_average[order]
+        fUCy = UC//2+fff//dic_UC_average[order]
+        for fUC in range(6):
+            distances = np.zeros((UC**2*6,2))       #distances of all sites wrt fixed site
+            prod_zz = np.zeros(UC**2*6)
+            prod_xy = np.zeros(UC**2*6)
+            #Probably can be done faster
+            for i in range(UC**2*6):
+                iUCx, iUCy, iUC = (i//6//UC, i//6%UC, i%6)
+                distances[i] = fs.T_[0]*(iUCx-fUCx) + fs.T_[1]*(iUCy-fUCy) + np.dot(fs.t_.T,(UC_positions[iUC]-UC_positions[fUC]))
+                prod_zz[i] = lattice[iUCx,iUCy,iUC,2]*lattice[fUCx,fUCy,fUC,2]
+                prod_xy[i] = lattice[iUCx,iUCy,iUC,0]*lattice[fUCx,fUCy,fUC,0]+lattice[iUCx,iUCy,iUC,1]*lattice[fUCx,fUCy,fUC,1]
+            """
+            We can create SSFzz in one shot by creating a matrix of kx,ky values and doing the dot product at once.
+            We use the cosine since the SSF is real.
+            """
+            X,Y = np.meshgrid(kxs,kys)
+            cos_kd = np.cos(np.einsum('ijm,km->ijk',np.dstack([X.T,Y.T]),distances))/2
+            SSFzz += np.sum(cos_kd*prod_zz, axis=2)
+            SSFxy += np.sum(cos_kd*prod_xy, axis=2)
+    SSFzz /= UC**2*6*dic_UC_average[order]**2
+    SSFxy /= UC**2*6*dic_UC_average[order]**2
     time_final = timedelta(seconds=time()-time_initial)
     print("SSF compute time: ",str(time_final))
-    if 0:
+    if save:
+        print("Saving..")
         np.save(SSFzz_fn,SSFzz)
         np.save(SSFxy_fn,SSFxy)
 else:
@@ -111,10 +117,11 @@ for i in range(2):
     ax.set_xlim(kxs[0],kxs[-1])
     ax.set_ylim(kys[0],kys[-1])
     title = "SSF "+tt[i]
-    title += ", alpha="+"{:.2f}".format(alpha*180/np.pi)+"°" if order=='Coplanar' else ''
     ax.set_title(title)
     plt.colorbar(sc)
     ax.set_aspect('equal')
+
+plt.suptitle(fs.get_suptitle(order,args,Jd,Jt))
 
 fig.tight_layout()
 plt.show()

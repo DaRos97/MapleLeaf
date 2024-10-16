@@ -89,7 +89,7 @@ if plot_PD:#Plot PD
     cmap = plt.get_cmap('tab20')
     n_colors = cmap.N
     colors = [cmap(i/(n_colors-1)) for i in range(n_colors-1)]
-    
+    #
     cmap2 = plt.get_cmap('tab20b')
     n_colors = cmap2.N
     for i in range(n_colors):
@@ -97,7 +97,7 @@ if plot_PD:#Plot PD
 
     fig,ax = plt.subplots()
     fig.set_size_inches(20,15)
-    
+    #
     marker = 's'
     for i in range(nn):
         for j in range(nn):
@@ -143,7 +143,7 @@ if print_txt:   #print values
 
 if plot_val: #Plot energies 
     from matplotlib import cm
-    
+    #
     fig,ax = plt.subplots(subplot_kw={"projection":"3d"},nrows=1,ncols=4)
     fig.set_size_inches(25,10)
 
@@ -183,7 +183,7 @@ if plot_val: #Plot energies
         ax[i].set_xlabel(r'$J_d$')
         ax[i].set_ylabel(r'$J_t$')
 
-    
+    #
     fig.tight_layout()
     plt.show()
 

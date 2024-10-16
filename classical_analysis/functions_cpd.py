@@ -68,7 +68,7 @@ def E_bA3(pars,*args):
     h,t,d = args
     return 3*C(tt)*C(tp)*(2*h+d) + 3*S(tt)*S(tp)*C(ph)*(d-h) + 3/2*t*(3*C(tt)**2+3*C(tp)**2-2)
 
-def E_3NC9a(pars,*args):
+def E_3NC9a(pars,*args):        #Coplanar
     tt, tp, ph = pars
     h,t,d = args
     return 3*C(tt)*C(tp)*(2*h + d) + 3*S(tt)*S(tp)*( 2*h*C(ph) + d*C(ph-2*np.pi/3)) + 3/2*t*(3*C(tt)**2+3*C(tp)**2 -2)
