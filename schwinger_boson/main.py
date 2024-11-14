@@ -7,27 +7,29 @@ import matplotlib.pyplot as plt
 
 machine = fs.get_machine(os.getcwd())
 
-save_to_file = True
-disp = 1#True if machine=='loc' else False        #display
+save_solution = False if machine=='loc' else True
+save_fig = False if machine=='loc' else True
+disp = True if machine=='loc' else False        #display
 compute_ssf = True
 
 """Parameters of phase diagram"""
-index = 0 if len(sys.argv)<2 else int(sys.argv[1])
+index = 0 if len(sys.argv)<3 else int(sys.argv[2])
 J_h, J_d, J_t, Spin, K_points = fs.get_pars(index)
 Js = (J_h,J_d,J_t)
 print("Using parameters: (Jh,Jd,Jt)=(","{:.3f}".format(J_h),",","{:.3f}".format(J_d),",","{:.3f}".format(J_t),"), S=","{:.3f}".format(Spin),", points in BZ=",str(K_points))
 """Choice of ansatz"""
-ansatz = 'C3a'        #see dic_mf_ans for defined anstaze
+ansatz = 'C6_5' if len(sys.argv)<2 else sys.argv[1]
 header_g,header_mf = fs.get_header(ansatz,Js)
 number_random_ics = 1
 initial_conditions = fs.get_initial_conditions(ansatz,header_mf,number_random_ics)
 print("Using ansatz: ",ansatz," with classical and ",str(number_random_ics)," random initial conditions")
 print("Header: ",header_g+header_mf)
+print('-------------------------------------------------------------\n')
 """Parameters of minimization"""
 MaxIter = 3000
 prec_L = 1e-10       #precision required in L maximization
 L_method = 'Brent'
-L_bounds = (0,50)       #bound of Lagrange multiplier
+L_bounds = (0,100)       #bound of Lagrange multiplier
 cutoff_L = 1e-4
 pars_L = (prec_L,L_method,L_bounds)
 cutoff_O = 1e-4
@@ -50,13 +52,15 @@ filename_mf = fs.get_res_final_fn(pars_general,machine)
 """Initiate self consistent routine"""
 initial_time = time()
 if not Path(filename_mf).is_file():
+    n_conv = 0  #number of converged results
     best_E = 1e10
     for ic in range(len(initial_conditions)):
         P_initial = initial_conditions[ic]
-        print("Using initial condition:",ic)
-        for i in range(len(header_mf)):
-            print(header_mf[i],': ',P_initial[i])
-        print('-----------------------------------------------------------')
+        print("Initial condition:",ic)
+        if disp:
+            for i in range(len(header_mf)):
+                print(header_mf[i],': ',P_initial[i])
+            print('-----------------------------------------------------------')
         #
         new_O = P_initial;      old_O_1 = new_O;      old_O_2 = new_O
         new_L = (L_bounds[0]+L_bounds[1])/2;       old_L_1 = 0;    old_L_2 = 0
@@ -78,6 +82,9 @@ if not Path(filename_mf).is_file():
                 input()
             new_L = fs.compute_L(mf_parameters,pars_general,pars_L)
             temp_O = fs.compute_O_all(mf_parameters,new_L,pars_general)
+            if len(temp_O) == 1:
+                go_to_next = True
+                break
             #Update old O variables
             old_O_2 = np.array(old_O_1)
             old_O_1 = np.array(new_O)
@@ -115,7 +122,8 @@ if not Path(filename_mf).is_file():
                 print('\n')
     #            input()
             if converged_O and converged_L:
-                print("Achieved convergence")
+                n_conv += 1
+                print("Achieved convergence ",n_conv,"/",ic+1)
                 final_mf_parameters = fs.get_mf_pars(new_O,header_mf,ansatz)
                 final_L = fs.compute_L(mf_parameters,pars_general,pars_L)
                 final_O = new_O
@@ -126,7 +134,7 @@ if not Path(filename_mf).is_file():
                 print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Exceeded number of steps!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                 go_to_next = True
                 break
-            if new_L>10 and step>3:
+            if new_L>90:
                 print("very bad, going to next ic")
                 input()
                 go_to_next = True
@@ -136,41 +144,47 @@ if not Path(filename_mf).is_file():
         ######################################################################################################
         ######################################################################################################
         print("\nNumber of iterations: ",step,'\n')
-        if new_L < L_bounds[0] + 0.01 or new_L > L_bounds[1] - 0.01:
-            print("Suspicious L value: ",new_L," NOT saving")
-            exit()
-        ################################################### Save solution
-        Energy,Gap = fs.mf_energy(final_mf_parameters,final_L,pars_general)
-        if Energy == 0:
-            print("Something wrong with the energy=",Energy)
-            exit()
-        print("Final values of minimization:")
-        print("Final L: ","{:.6f}".format(final_L))
-        for i in range(len(header_mf)):
-            print(header_mf[i],': ',"{:.6f}".format(final_O[i]))
-        print("Energy: ","{:.6f}".format(Energy))
-        print("Gap: ","{:.6f}".format(Gap))
         Dt = time()-ansatz_initial_time
         print("Time: ",str(Dt//60),"mins and ",Dt%60," seconds")
         print('-------------------------------------------------------\n')
+        Energy,Gap = fs.mf_energy(final_mf_parameters,final_L,pars_general)
         if Energy < best_E:
             best_E = Energy
             best_Gap = Gap
             best_mf = final_mf_parameters
             best_L = final_L
-    if save_to_file:
+        if disp:
+            if new_L < L_bounds[0] + 0.01 or new_L > L_bounds[1] - 0.01:
+                print("Suspicious L value: ",new_L," NOT saving")
+                continue
+            ################################################### Save solution
+            if Energy == 0:
+                print("Something wrong with the energy=",Energy)
+                continue
+            print("Final values of minimization ",ic,":")
+            print("Final L: ","{:.6f}".format(final_L))
+            for i in range(len(header_mf)):
+                print(header_mf[i],': ',"{:.6f}".format(final_O[i]))
+            print("Energy: ","{:.6f}".format(Energy))
+            print("Gap: ","{:.6f}".format(Gap))
+    if best_E==1e10:
+        print("Not a single initial condition converged, NOT saving")
+    elif save_solution:
         data_mf = np.zeros(len(best_mf)+3,dtype=complex)
         data_mf[:-3] = best_mf
         data_mf[-3] = best_L
         data_mf[-2] = best_E
         data_mf[-1] = best_Gap
         np.save(filename_mf,data_mf)
+    print("Finished minimizations")
+    print("-----------------------------------------------------------\n")
 else:
     data_mf = np.load(filename_mf)
     best_mf = data_mf[:-3]
     best_L = data_mf[-3]
     best_E = data_mf[-2]
     best_Gap = data_mf[-1]
+    print("Loaded best solution which has")
     print("Energy: ","{:.6f}".format(best_E))
     print("Gap: ","{:.6f}".format(best_Gap))
 
@@ -187,30 +201,14 @@ if compute_ssf:
         print("computing ssf")
         SSFzz,SSFxy = fs.spin_structure_factor(spin_lattice)
         #Plot
-        fs.plot_ssf(SSFzz,SSFxy)
+        figure_fn = '' if machine=='loc' else fs.get_figure_fn(pars_general,machine)
+        fs.plot_ssf(SSFzz,SSFxy,figure_fn)
     else:
         """Structure factor from Bogoliubov form."""
-        print("from Bogoliubov bosons")
-exit()
+        print("from Bogoliubov bosons -> gapped solution")
 
-"""Save result"""
-if save_to_file:
-    exit()
-    data = [J_nn,h,E,gap,new_L]
-    for i in range(len(P_initial)):
-        data.append(new_O[i])
-    DataDic = {}
-    header = inp.header
-    for ind in range(len(data)):
-        DataDic[header[ind]] = data[ind]
-    if save_to_file:
-        sf.SaveToCsv(DataDic,csvfile)
-
-    print(DataDic)
-
-
-
-print("Total time: ",'{:5.2f}'.format((t()-Ti)/60),' minutes.')                           ################
+Tt = time()-initial_time
+print("Time: ",str(Tt//60),"mins and ",Tt%60," seconds")
 
 
 

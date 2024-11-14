@@ -22,13 +22,33 @@ def get_pars(index):
 
 """Ansatze mean field parameters. All parameters in the list are subject to minimization."""
 dic_mf_ans = {
+    'C6_1':     ['Ah','At','argAt','Bh','argBh','Bt','argBt','Bd'],
+    'C6_2':     ['Ah','Bh','argBh','Bd'],
+    'C6_3':     ['Ah','At','argAt','Bh','argBh','Bt','argBt','Bd'],
+    'C6_5':     ['Ah','At','argAt','Ad','argAd','Bh','argBh','Bt','argBt','Bd'],
+    'C6_6':     ['Ah','Bh','argBh','Bd'],
+    'C6_7':     ['Ah','At','argAt','Ad','argAd','Bh','argBh','Bt','argBt','Bd'],
     'C6a':      ['Ah','At','argAt','Ad','argAd','Bh','argBh','Bt','argBt','Bd','argBd'],
     'C6ar':     ['Ah','At','Ad','Bh','Bt','Bd'],
     'C3a':      ['Ah','Ahp','argAhp','At','argAt','Atp','argAtp','Ad','argAd','Bh','argBh','Bhp','argBhp','Bt','argBt','Btp','argBtp','Bd','argBd'],
     'C3ar':     ['Ah','Ahp','At','Atp','Ad','Bh','Bhp','Bt','Btp','Bd'],
 }
+"""Parameters of ansatz appearing in the Hamiltonian"""
+dic_parameters_ansatz  = {
+    'C6_1': (0,0,0,0),
+    'C6_2': (0,0,0,1),
+    'C6_3': (0,1,0,0),
+    'C6_5': (1,0,0,0),
+    'C6_6': (1,0,0,0),
+    'C6_7': (1,1,1,0),
+}
 """Classical orders compatible with each ansatz."""
 dic_compatible_orders = {
+    'C6_1': ['FM','Neel'],
+    'C6_2': ['FM','Neel'],
+    'C6_5': ['FM','Neel'],
+    'C6_6': ['FM','Neel'],
+    'C6_7': ['FM','Neel'],
     'C6a':  ['Neel'],
     'C6ar': ['Neel'],
     'C3a':  ['Neel'],
@@ -133,75 +153,76 @@ def big_Nk(mf_parameters,L,pars_general):
     Kx,Ky = KT1.shape
     Ah,Ahp,At,Atp,Ad,Bh,Bhp,Bt,Btp,Bd = mf_parameters
     ################
+    s1,s2,s3,s4 = (0,0,0,0) if not ansatz in dic_parameters_ansatz.keys() else dic_parameters_ansatz[ansatz]
     alpha = np.zeros((m,m,Kx,Ky), dtype=complex)
     beta = np.zeros((m,m,Kx,Ky), dtype=complex)
     delta = np.zeros((m,m,Kx,Ky), dtype=complex)
     #
-    alpha[0,1] = J_h/2*Bhp.conj()
-    alpha[0,2] = J_t/2*Bt*KT1
+    alpha[0,1] = J_h/2*Bhp.conj()*(-1)**s1
+    alpha[0,2] = J_t/2*Bt*KT1*(-1)**s2
     alpha[0,3] = J_h/2*Bh*KT2_
-    alpha[0,4] = J_d/2*Bd
+    alpha[0,4] = J_d/2*Bd*(-1)**s3
     alpha[0,5] = J_t/2*Bt.conj()*KT2_
     alpha[1,2] = J_d/2*Bd.conj()
     alpha[1,3] = J_t/2*Btp
-    alpha[1,4] = J_t/2*Btp.conj()
+    alpha[1,4] = J_t/2*Btp.conj()*(-1)**s2
     alpha[1,5] = J_h/2*Bh.conj()*KT12_
-    alpha[2,3] = J_h/2*Bhp.conj()
+    alpha[2,3] = J_h/2*Bhp.conj()*(-1)**s1
     alpha[2,4] = J_h/2*Bh*KT1_
     alpha[2,5] = J_t/2*Bt*KT12_
     alpha[3,4] = J_t/2*Btp
     alpha[3,5] = J_d/2*Bd.conj()
-    alpha[4,5] = J_h/2*Bhp
+    alpha[4,5] = J_h/2*Bhp*(-1)**s1
     alpha += np.conjugate(np.transpose(alpha,axes=(1,0,2,3)))
     #just change B*->B
-    delta[0,1] = J_h/2*Bhp
-    delta[0,2] = J_t/2*Bt.conj()*KT1
+    delta[0,1] = J_h/2*Bhp*(-1)**s1
+    delta[0,2] = J_t/2*Bt.conj()*KT1*(-1)**s2
     delta[0,3] = J_h/2*Bh.conj()*KT2_
-    delta[0,4] = J_d/2*Bd.conj()
+    delta[0,4] = J_d/2*Bd.conj()*(-1)**s3
     delta[0,5] = J_t/2*Bt*KT2_
-    delta[1,2] = J_d/2*Bd
+    delta[1,2] = J_d/2*Bd*(-1)**s4
     delta[1,3] = J_t/2*Btp.conj()
-    delta[1,4] = J_t/2*Btp
+    delta[1,4] = J_t/2*Btp*(-1)**s2
     delta[1,5] = J_h/2*Bh*KT12_
-    delta[2,3] = J_h/2*Bhp
+    delta[2,3] = J_h/2*Bhp*(-1)**s1
     delta[2,4] = J_h/2*Bh.conj()*KT1_
     delta[2,5] = J_t/2*Bt.conj()*KT12_
     delta[3,4] = J_t/2*Btp.conj()
     delta[3,5] = J_d/2*Bd
-    delta[4,5] = J_h/2*Bhp.conj()
+    delta[4,5] = J_h/2*Bhp.conj()*(-1)**s1
     delta += np.conjugate(np.transpose(delta,axes=(1,0,2,3)))
     #need to do both sides here
-    beta[0,1] = -J_h/2*Ahp
-    beta[0,2] =  J_t/2*At*KT1
+    beta[0,1] = -J_h/2*Ahp*(-1)**s1
+    beta[0,2] =  J_t/2*At*KT1*(-1)**s2
     beta[0,3] =  J_h/2*Ah*KT2_
-    beta[0,4] =  J_d/2*Ad
+    beta[0,4] =  J_d/2*Ad*(-1)**s3
     beta[0,5] = -J_t/2*At*KT2_
-    beta[1,2] = -J_d/2*Ad
+    beta[1,2] = -J_d/2*Ad*(-1)**s4
     beta[1,3] =  J_t/2*Atp
-    beta[1,4] = -J_t/2*Atp
+    beta[1,4] = -J_t/2*Atp*(-1)**s2
     beta[1,5] = -J_h/2*Ah*KT12_
-    beta[2,3] = -J_h/2*Ahp
+    beta[2,3] = -J_h/2*Ahp*(-1)**s1
     beta[2,4] =  J_h/2*Ah*KT1_
     beta[2,5] =  J_t/2*At*KT12_
     beta[3,4] =  J_t/2*Atp
     beta[3,5] = -J_d/2*Ad
-    beta[4,5] =  J_h/2*Ahp
+    beta[4,5] =  J_h/2*Ahp*(-1)**s1
     #Other side has overall - and k->-k
-    beta[1,0] =  J_h/2*Ahp
-    beta[2,0] = -J_t/2*At*KT1_
+    beta[1,0] =  J_h/2*Ahp*(-1)**s1
+    beta[2,0] = -J_t/2*At*KT1_*(-1)**s2
     beta[3,0] = -J_h/2*Ah*KT2
-    beta[4,0] = -J_d/2*Ad
+    beta[4,0] = -J_d/2*Ad*(-1)**s3
     beta[5,0] =  J_t/2*At*KT2
     beta[2,1] =  J_d/2*Ad
     beta[3,1] = -J_t/2*Atp
-    beta[4,1] =  J_t/2*Atp
+    beta[4,1] =  J_t/2*Atp*(-1)**s2
     beta[5,1] =  J_h/2*Ah*KT12
-    beta[3,2] =  J_h/2*Ahp
+    beta[3,2] =  J_h/2*Ahp*(-1)**s1
     beta[4,2] = -J_h/2*Ah*KT1
     beta[5,2] = -J_t/2*At*KT12
     beta[4,3] = -J_t/2*Atp
     beta[5,3] =  J_d/2*Ad
-    beta[5,4] = -J_h/2*Ahp
+    beta[5,4] = -J_h/2*Ahp*(-1)**s1
     #
     final_N = np.zeros((2*m,2*m,Kx,Ky), dtype=complex)
     final_N[:m,:m] = alpha
@@ -227,10 +248,14 @@ def compute_O_all(mf_parameters,L,pars_general):
     for i in range(Kx):
         for j in range(Ky):
             N_k = matrix_N[:,:,i,j]
-            Ch = LA.cholesky(N_k,check_finite=False)
-            w0,U = LA.eigh(Ch@J_@Ch.T.conj())
-            w = np.diag(np.sqrt(J_@w0))
-            matrix_M[:,:,i,j] = LA.inv(Ch)@U@w
+            try:
+                Ch = LA.cholesky(N_k,check_finite=False)
+                w0,U = LA.eigh(Ch@J_@Ch.T.conj())
+                w = np.diag(np.sqrt(J_@w0))
+                matrix_M[:,:,i,j] = LA.inv(Ch)@U@w
+            except:
+                print("L maximization didn't go apparently...")
+                return np.ones(1)*17
     #For each parameter need to know what it is
     header_mf = get_header(ansatz,Js)[1]
     new_O = np.zeros(len(header_mf))
@@ -363,8 +388,9 @@ def get_initial_conditions(ansatz,header_mf,number_random_ic):
     """Gets the list of initial conditions to use depending on the ansatz.
     It takes all the compatible classical orders plus some random initial conditions."""
     ics = []
-    for co in dic_compatible_orders[ansatz]:
-        ics.append(format_initial_condition(classical_orders_MF[co],header_mf))
+    if ansatz in dic_compatible_orders.keys():
+        for co in dic_compatible_orders[ansatz]:
+            ics.append(format_initial_condition(classical_orders_MF[co],header_mf))
     for n in range(number_random_ic):
         ics.append(random_ic(header_mf))
     return ics
@@ -392,6 +418,55 @@ def get_mf_pars(P,header_mf,ansatz):
     """
     full_list_mf = list(classical_orders_MF['FM'].keys())
     res = np.zeros(10,dtype=complex)    #there are 10 complex mf parameters in total
+    d_bond = any(['d' in header_mf[i] for i in range(len(header_mf))])
+    t_bond = any(['t' in header_mf[i] for i in range(len(header_mf))])
+    if ansatz in {'C6_1','C6_3'}:
+        res[0] = P[0]*np.exp(1j*0)
+        if t_bond:
+            res[2] = P[1]*np.exp(1j*P[2])   #At
+            #
+            res[5] = P[3]*np.exp(1j*P[4])   #Bh
+            res[7] = P[5]*np.exp(1j*P[6])   #Bt
+            if d_bond:
+                res[9] = P[7]   #Bd -> phase 0, but can be also pi
+        else:
+            res[5] = P[1]*np.exp(1j*P[2])   #Bh
+            if d_bond:
+                res[9] = P[3]   #Bd -> phase 0, but can be also pi
+        res[1] = res[0] #Ahp = Ah
+        res[3] = res[2] #Atp = At
+        res[6] = res[5] #Bhp = Bh
+        res[8] = res[7] #Btp = Bt
+    if ansatz in {'C6_2','C6_6'}:
+        res[0] = P[0]*np.exp(1j*0)
+        res[5] = P[1]*np.exp(1j*P[2])   #Bh
+        res[9] = 1j*P[3] if ansatz == 'C6_2' else P[3] #Bd
+        res[1] = res[0] #Ahp = Ah
+        res[6] = res[5] #Bhp = Bh
+    if ansatz in {'C6_5','C6_7'}:
+        res[0] = P[0]*np.exp(1j*0)
+        if t_bond:
+            res[2] = P[1]*np.exp(1j*P[2])   #At
+            #
+            if d_bond:
+                res[4] = P[3]*np.exp(1j*P[4])   #Ad
+                res[5] = P[5]*np.exp(1j*P[6])   #Bh
+                res[7] = P[7]*np.exp(1j*P[8])   #Bt
+                res[9] = 1j*P[9]                #Bd
+            else:
+                res[5] = P[3]*np.exp(1j*P[4])   #Bh
+                res[7] = P[5]*np.exp(1j*P[6])   #Bt
+        else:
+            if d_bond:
+                res[4] = P[1]*np.exp(1j*P[2])   #Ad
+                res[5] = P[3]*np.exp(1j*P[4])   #Bh
+                res[9] = 1j*P[5]                #Bd
+            else:
+                res[5] = P[1]*np.exp(1j*P[2])   #Bh
+        res[1] = res[0] #Ahp = Ah
+        res[3] = res[2] #Atp = At
+        res[6] = res[5] #Bhp = Bh
+        res[8] = res[7] #Btp = Bt
     if ansatz == 'C6a': #Need to compare header_mf to account for possibly Js=0
         res[0] = P[0]*np.exp(1j*0)
         ind_res = 2
@@ -636,7 +711,7 @@ def get_kpoints_ssf(factors,max_k=100):
     kys = np.linspace(-vecy*fy,vecy*fy,res[1])
     return res[0],res[1],kxs,kys
 
-def plot_ssf(SSFzz,SSFxy):
+def plot_ssf(SSFzz,SSFxy,filename=''):
     """Plot of the resulting ssf.
     """
     nkx, nky, kxs,kys = get_kpoints_ssf((6,10),150)
@@ -661,7 +736,11 @@ def plot_ssf(SSFzz,SSFxy):
         ax.set_aspect('equal')
 
     fig.tight_layout()
-    plt.show()
+    #Save
+    if not filename=='':
+        plt.savefig(filename)
+    if not 'users' in filename: #show only outside of cluster
+        plt.show()
 
 def plot_BZs(ax):
     """Plot the two rotated BZs for the SSF plots.
@@ -688,6 +767,12 @@ def plot_BZs(ax):
 """
 Filenames and I/O functions
 """
+def get_figure_fn(pars_general,machine):
+    Js,Spin,KM,ansatz = pars_general
+    J_h,J_d,J_t = Js
+    Kx,Ky = KM[0].shape
+    return get_res_final_dn(Kx,Ky,Spin,machine) +"fig_(Jh,Jd,Jt)=("+"{:.3f}".format(J_h)+","+"{:.3f}".format(J_d)+","+"{:.3f}".format(J_t)+')_ansatz'+ansatz+'.png'
+
 def get_res_final_fn(pars_general,machine):
     Js,Spin,KM,ansatz = pars_general
     J_h,J_d,J_t = Js
