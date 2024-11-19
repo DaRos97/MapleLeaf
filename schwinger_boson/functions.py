@@ -3,7 +3,7 @@ from scipy import linalg as LA
 from scipy.optimize import minimize_scalar
 from scipy.interpolate import RectBivariateSpline as RBS
 from pathlib import Path
-import csv
+from time import time
 import os
 import itertools
 import matplotlib.pyplot as plt
@@ -12,7 +12,7 @@ from matplotlib import cm
 def get_pars(index):
     """Get parameters of Hamiltonian."""
     lJh = [1,]
-    lJd = [1,]#0,-1]#np.linspace(0,-4,10)
+    lJd = [1,0.8]#0,-1]#np.linspace(0,-4,10)
     lJt = [0,]#np.linspace(0,-4,10)
     lSpin = [0.5,]#(np.sqrt(3)+1)/2,0.3,0.2]
     lKpoints = [(16,12),(32,24)]
@@ -69,6 +69,8 @@ classical_orders_MF = {
     {'Ah':1/2,'Ahp':1/2,'argAhp':np.pi,'At':0,'argAt':0,'Atp':np.sqrt(5)/4,'argAtp':0,'Ad':1/2,'argAd':0,
      'Bh':1/2,'argBh':0,'Bhp':1/2,'argBhp':np.pi,'Bt':1/2,'argBt':0,'Btp':1/2,'argBtp':np.pi,'Bd':1/2,'argBd':np.pi,},
 }
+"""Mean field parameters' names."""
+pars_mf_names = ['Ah ','Ahp','At ','Atp','Ad ','Bh ','Bhp','Bt ','Btp','Bd ']
 
 def compute_L(mf_parameters,pars_general,pars_L):
     """Evaluate best L by maximizing energy wrt L."""
@@ -104,6 +106,7 @@ def mf_energy(mf_parameters,L,pars_general,optimize_L=False):
     #Compute now the part of the energy coming from the Hamiltonian matrix by the use of a Bogoliubov transformation
     matrix_N = big_Nk(mf_parameters,L,pars_general)
     res = np.zeros((m,Kx,Ky))
+    ti = time()
     for i in range(Kx):
         for j in range(Ky):
             Nk = matrix_N[:,:,i,j]
@@ -238,24 +241,7 @@ def compute_O_all(mf_parameters,L,pars_general):
     """Computes expectation value of bond operators."""
     Js,Spin,KM,ansatz = pars_general
     Kx,Ky = KM[0].shape
-    m = 6
-    J_ = np.identity(2*m)
-    for i in range(m):
-        J_[i,i] = -1
-    #Compute first the transformation matrix M at each needed K -> pt iv of appendix A of PRB 87, 125127 (2013)
-    matrix_N = big_Nk(mf_parameters,L,pars_general)
-    matrix_M = np.zeros(matrix_N.shape,dtype=complex)
-    for i in range(Kx):
-        for j in range(Ky):
-            N_k = matrix_N[:,:,i,j]
-            try:
-                Ch = LA.cholesky(N_k,check_finite=False)
-                w0,U = LA.eigh(Ch@J_@Ch.T.conj())
-                w = np.diag(np.sqrt(J_@w0))
-                matrix_M[:,:,i,j] = LA.inv(Ch)@U@w
-            except:
-                print("L maximization didn't go apparently...")
-                return np.ones(1)*17
+    matrix_M = get_inversion_matrix(mf_parameters,L,pars_general)
     #For each parameter need to know what it is
     header_mf = get_header(ansatz,Js)[1]
     new_O = np.zeros(len(header_mf))
@@ -273,7 +259,7 @@ def compute_O_all(mf_parameters,L,pars_general):
             for j in range(Ky):
                 U,X,V,Y = split(matrix_M[:,:,i,j],m,m)
                 mf_k[i,j] = func_O(U,X,V,Y,li_,lj_,k_grid[:,i,j])
-        #
+        #  check this 
         inds = np.argwhere(np.absolute(mf_k)>1e2)
         if len(inds)>0:
             mf_k[inds[0,0],inds[0,1]] = 0
@@ -306,6 +292,29 @@ def compute_O_all(mf_parameters,L,pars_general):
             ax.set_title(par_name)
             plt.show()
     return new_O
+
+def get_inversion_matrix(mf_parameters,L,pars_general):
+    """Compute matrix M which diagonalizes the bosonic Hamiltonian."""
+    Js,Spin,KM,ansatz = pars_general
+    Kx,Ky = KM[0].shape
+    m = 6
+    J_ = np.identity(2*m)
+    for i in range(m):
+        J_[i,i] = -1
+    matrix_N = big_Nk(mf_parameters,L,pars_general)
+    matrix_M = np.zeros(matrix_N.shape,dtype=complex)
+    for i in range(Kx):
+        for j in range(Ky):
+            N_k = matrix_N[:,:,i,j]
+            try:
+                Ch = LA.cholesky(N_k,check_finite=False)
+                w0,U = LA.eigh(Ch@J_@Ch.T.conj())
+                w = np.diag(np.sqrt(J_@w0))
+                matrix_M[:,:,i,j] = LA.inv(Ch)@U@w
+            except:
+                print("L maximization didn't go apparently...")
+                return np.ones(1)*17
+    return matrix_M
 
 """For each unit cell size (6 or 12), gives the indexes of the sites in the UC
 over which to evaluate the bond expectation value"""
@@ -718,11 +727,11 @@ def plot_ssf(SSFzz,SSFxy,filename=''):
     #
     fig = plt.figure(figsize=(20,7))
     tt = ['zz','xy']
-    X,Y = np.meshgrid(kxs,kys)
+    X,Y = np.meshgrid(kys,kxs)
     for i in range(2):
         data = SSFzz if i == 0 else SSFxy
         ax = fig.add_subplot(1,2,i+1)
-        sc = ax.scatter(X.T,Y.T,c=data,
+        sc = ax.scatter(X,Y,c=data,
                     marker='s',
                     cmap=cm.plasma_r,
                     s=30,

@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.linalg as LA
 import functions as fs
 from time import time
 from pathlib import Path
@@ -78,7 +79,7 @@ if not Path(filename_mf).is_file():
             mf_parameters = fs.get_mf_pars(new_O,header_mf,ansatz)
             if 0:   #check mf_parameters
                 for i in range(10):
-                    print(np.absolute(mf_parameters[i]),np.angle(mf_parameters[i])%(2*np.pi))
+                    print(fs.pars_mf_names[i],': ',np.absolute(mf_parameters[i]),np.angle(mf_parameters[i])%(2*np.pi))
                 input()
             new_L = fs.compute_L(mf_parameters,pars_general,pars_L)
             temp_O = fs.compute_O_all(mf_parameters,new_L,pars_general)
@@ -185,13 +186,16 @@ else:
     best_E = data_mf[-2]
     best_Gap = data_mf[-1]
     print("Loaded best solution which has")
+    print("Lagrange multiplier L: ","{:.6f}".format(best_L))
+    for i in range(len(best_mf)):
+        print(fs.pars_mf_names[i],': ',"{:.6f}".format(best_mf[i]))
     print("Energy: ","{:.6f}".format(best_E))
     print("Gap: ","{:.6f}".format(best_Gap))
 
 if compute_ssf:
     """Compute ssf"""
     print("Computing SSF")
-    if best_Gap < 1e-3:
+    if 1 and best_Gap < 1e-3:
         """LRO structure factor. Use method of spins from shape of condensate."""
         print("using gap closing points")
         #Get condensate
@@ -205,6 +209,80 @@ if compute_ssf:
         fs.plot_ssf(SSFzz,SSFxy,figure_fn)
     else:
         """Structure factor from Bogoliubov form."""
+        Kx = 16     #points for summation over BZ
+        Ky = 12
+        k_grid = fs.get_k_grid(Kx,Ky)
+        Nx = 16    #points of SSF to compute in BZ (Q)
+        Ny = 12
+        Q_grid = fs.get_k_grid(Nx,Ny)
+        D = np.array([          #matrix of positions in UC
+                      [np.sqrt(3)/2, 1/2],
+                      [0, 1],
+                      [0, -1],
+                      [np.sqrt(3)/2, -1/2],
+                      [-np.sqrt(3)/2, -1/2],
+                      [-np.sqrt(3)/2, 1/2],
+        ])
+        #Result store
+        SSFxx = np.zeros((Nx,Ny))
+        #M and N at K, -K, K+Q, -K-Q
+        k_grid_list = [k_grid, -k_grid, k_grid+Q_grid, -k_grid-Q_grid]
+        MMs = []
+        m = 6
+        J_ = np.identity(2*m)
+        for i in range(m):
+            J_[i,i] = -1
+        for k_g in k_grid_list:
+            KMg = fs.compute_KM(k_g,fs.T1_,fs.T2_)
+            pars_general_g = (Js,Spin,KMg,ansatz)
+            matrix_N = fs.big_Nk(best_mf,best_L,pars_general_g)
+            matrix_M = np.zeros(matrix_N.shape,dtype=complex)
+            for i in range(Kx):
+                for j in range(Ky):
+                    N_k = matrix_N[:,:,i,j]
+                    try:
+                        Ch = LA.cholesky(N_k,check_finite=False)
+                        w0,U = LA.eigh(Ch@J_@Ch.T.conj())
+                        w = np.diag(np.sqrt(J_@w0))
+                        matrix_M[:,:,i,j] = LA.inv(Ch)@U@w
+                    except:
+                        print("Error in Cholesky....")
+                        exit()
+            MMs.append(matrix_M)
+        #Compute Xi(Q) for Q in BZ
+        for xx in range(Nx*Ny):
+            ii = xx//Nx
+            ij = xx%Ny
+            #
+            delta = np.zeros((6,6),dtype=complex)
+            for u in range(m):
+                for g in range(m):
+                    delta[u,g] = np.exp(1j*np.dot(Q_grid[:,ii,ij],D[g]-D[u]))
+            #
+            resxy = 0
+            #summation over BZ
+            for x in range(Kx*Ky):
+                i = x//Kx
+                j = x%Ky
+                #
+                U1,X1,V1,Y1 = fs.split(MMs[0][:,:,i,j],6,6)
+                U2,X2,V2,Y2 = fs.split(MMs[1][:,:,i,j],6,6)
+                U3,X3,V3,Y3 = fs.split(MMs[2][:,:,i,j],6,6)
+                U4,X4,V4,Y4 = fs.split(MMs[3][:,:,i,j],6,6)
+                ##############################################
+                temp1 = np.einsum('ua,ga->ug',np.conjugate(X1),X1) * np.einsum('ua,ga->ug',np.conjugate(Y4),Y4)
+                temp2 = np.einsum('ua,ga->ug',np.conjugate(X1),Y1) * np.einsum('ua,ga->ug',np.conjugate(Y4),X4)
+                temp3 = np.einsum('ua,ga->ug',V2,np.conjugate(V2)) * np.einsum('ua,ga->ug',U3,np.conjugate(U3))
+                temp4 = np.einsum('ua,ga->ug',V2,np.conjugate(U2)) * np.einsum('ua,ga->ug',U3,np.conjugate(V3))
+                temp = (temp1 + temp2 + temp3 + temp4) * delta
+                resxy += temp.ravel().sum()
+            #
+            SSFxx[ii,ij] = np.real(resxy)/(Kx*Ky)
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+        X,Y = np.meshgrid(np.linspace(0,1,Ny),np.linspace(0,1,Nx))
+        ax.plot_surface(X,Y,SSFxx)
+        plt.show()
         print("from Bogoliubov bosons -> gapped solution")
 
 Tt = time()-initial_time
