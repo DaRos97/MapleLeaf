@@ -11,75 +11,75 @@ import sys,os
 
 machine = fs.get_machine(os.getcwd())
 
-nC = '6' if len(sys.argv)==1 else sys.argv[1]
+disp = 0#True if machine=='loc' else False
 
-plot_PD = 1
-plot_val = 0 if plot_PD else 1
-n_ord = 6
 #
-print_txt = 0
+plot_PD = 1
+plot_val = 0
+#what is this
 II = 43
 JJ = 0
 #
+
 Jh = 1
-nn = 101
+nn = 9
 bound = 4
-ng = 0
-Jts = np.linspace(-bound,bound*ng,nn)
+ng = 1  #0 or 1, gives the upper bound
 Jds = np.linspace(-bound,bound*ng,nn)
+Jts = np.linspace(-bound,bound*ng,nn)
 
-res_fn = fs.get_res_cpd_fn(nC,Jh,nn,Jts,Jds)
+res_fn = fs.get_res_cpd_fn(Jh,nn,Jds,Jts)
 
+txt_ansatz = ['kiwi','banana','mango']
+dic_ind_discrete = {'kiwi':8, 'banana':8, 'mango':2}
 if not Path(res_fn).is_file():
-    Es = np.zeros((nn,nn,len(fs.Eall[nC]),5))
-    for i in range(nn):
-        print(i)
-        for j in range(nn):
-            print(j)
-            args = (Jh, Jts[j], Jds[i])
-            for c in range(len(fs.Eall[nC])):
-                if fs.Eall[nC][c] in fs.E0s:
-                    Es[i,j,c,0] = fs.Eall[nC][c](*args)
-                    Es[i,j,c,1] = Es[i,j,c,2] = np.nan
-                    nans = 1        #start index of nans
-                elif fs.Eall[nC][c] in fs.E1s:
-                    Em = minimize_scalar(
-                            fun=fs.Eall[nC][c],
-                            bounds=[0,np.pi/2],
+    Energies = np.zeros((nn,nn,3,8,4))  #Jd, Jt, one of the three ansatz, 8 max number of discrete pars, 4 results max for each solution (energy+3max continuum pars)
+    for ind_d in range(nn):
+        print("J_d = ",Jds[ind_d])
+        for ind_t in range(nn):
+            if disp:
+                print("J_t = ",Jts[ind_t])
+            Js = (Jh, Jds[ind_d], Jts[ind_t])
+            for ind_ans in range(3):
+                txt = txt_ansatz[ind_ans]
+                if disp:
+                    print("Ansatz ",txt)
+                for ind_discrete in range(dic_ind_discrete[txt]):
+                    args=(fs.get_discrete_index(ind_discrete,txt),Js)
+                    if disp:
+                        print("Discrete pars: ",args[0])
+                    if txt == 'kiwi':   #only one continuous parameter
+                        Em = minimize_scalar(
+                            fun=fs.E_kiwi,
+                            bounds=[0,np.pi],
                             args=args,
-                            method='bounded',
-                            )
-                    Es[i,j,c,0] = Em.fun
-                    Es[i,j,c,1] = Em.x
-                    nans = 2
-                else:
-                    if fs.Eall[nC][c] in fs.E2s:
-                        nans = 3
-                        bounds = ((0,np.pi),(0,np.pi))
-                    if fs.Eall[nC][c] in fs.E3s:
-                        nans = 4
-                        bounds = ((0,np.pi),(0,np.pi),(0,2*np.pi))
-                    if fs.Eall[nC][c] in fs.E4s:
-                        nans = 5
-                        bounds = ((0,np.pi),(0,np.pi),(0,2*np.pi),(0,2*np.pi))
-                    #
-                    Em = d_e(
-                        fs.Eall[nC][c],
-                        args=args,
-                        tol=1e-5,
-                        popsize=15,
-                        bounds=bounds,
-                        polish=True,
-                        strategy='rand2bin'
+                            method='bounded'
                         )
-                    Es[i,j,c,0] = Em.fun
-                    Es[i,j,c,1:nans] = Em.x
-                for NN in range(nans,5):
-                    Es[i,j,c,NN] = np.nan
+                        npars = 1
+                    else:
+                        bounds = ((0,np.pi),(0,2*np.pi)) if txt=='banana' else ((0,np.pi),(0,np.pi),(0,np.pi))
+                        Em = d_e(
+                            fs.functions_fruit[txt],
+                            args=args,
+                            tol=1e-5,
+                            popsize=15,
+                            bounds=bounds,
+                            polish=True,
+                            strategy='rand2bin'
+                        )
+                        npars = len(Em.x)
+                    Energies[ind_d,ind_t,ind_ans,ind_discrete,0] = Em.fun
+                    Energies[ind_d,ind_t,ind_ans,ind_discrete,1:1+npars] = Em.x
+                    for i in range(1+npars,4):
+                        Energies[ind_d,ind_t,ind_ans,ind_discrete,i] = np.nan
+                    if disp:
+                        print("Finished minimization with E=",Em.fun," and pars ",Em.x)
+                        print(Energies[ind_d,ind_t,ind_ans,ind_discrete])
+                        input()
     #
-    np.save(res_fn,Es)
+    np.save(res_fn,Energies)
 else:
-    Es = np.load(res_fn)
+    Energies = np.load(res_fn)
 print("Finished computing")
 
 if not machine=='loc':
@@ -94,33 +94,49 @@ if plot_PD:#Plot PD
     n_colors = cmap2.N
     for i in range(n_colors):
         colors.append(cmap2(i/(n_colors-1)))
+    colors = np.array(colors[:24]).reshape(3,8,4)
 
     fig,ax = plt.subplots()
     fig.set_size_inches(20,15)
     #
+    list_ind = []
     marker = 's'
-    for i in range(nn):
-        for j in range(nn):
-            ind = np.argmin(Es[i,j,:,0])
-            lind = np.argwhere(abs(Es[i,j,:,0]-Es[i,j,ind,0])<1e-4)
-            if len(lind)>1:
-                ind = min(lind)[0]
-            if ind >= 6:
-                ind = 6 + fs.get_which_NonCoplanar(Es[i,j,6,1:])
-            ax.scatter(Jds[i],Jts[j],color=colors[ind],marker=marker,s=50)
+    for ind_d in range(nn):
+        for ind_t in range(nn):
+            ind = np.unravel_index(np.argmin(Energies[ind_d,ind_t,:,:,0]),Energies[ind_d,ind_t,:,:,0].shape)
+            if ind not in list_ind:
+                list_ind.append(ind)
+            if 0:   #check degeneracies
+                lind = np.argwhere(abs(Es[i,j,:,0]-Es[i,j,ind,0])<1e-4)
+                if len(lind)>1:
+                    ind = min(lind)[0]
+                if ind >= 6:
+                    ind = 6 + fs.get_which_NonCoplanar(Es[i,j,6,1:])
+            ax.scatter(Jds[ind_d],Jts[ind_t],color=colors[ind[0],ind[1]],marker=marker,s=50)
 
     ax.set_xlabel(r"$J_d$",size=30)
     ax.set_ylabel(r"$J_t$",size=30)
     ax.xaxis.set_tick_params(labelsize=20)
     ax.yaxis.set_tick_params(labelsize=20)
 
-    legend_entries = []
-    for i in [0,1,4,6,7,8]:
-        legend_entries.append( Line2D([0], [0], marker='o', color='w', label=fs.name_list[nC][i],
-                              markerfacecolor=colors[i], markersize=15)
-                              )
+    if 1:   #legend
+        legend_entries = []
+        list_ind = np.array(list_ind)[np.argsort(np.array(list_ind)[:,0])]  #sort
+        for i in range(len(list_ind)):
+            ind = list_ind[i]
+            txt = txt_ansatz[ind[0]]
+            inds = fs.get_discrete_index(ind[1],txt)
+            txt += ', ('
+            for n in range(len(inds)):
+                txt += str(inds[n])
+                if not n==len(inds)-1:
+                    txt += ','
+            txt += ')'
+            legend_entries.append( Line2D([0], [0], marker='o', color='w', label=txt,
+                                  markerfacecolor=colors[ind[0],ind[1]], markersize=15)
+                                  )
 
-    ax.legend(handles=legend_entries,loc='lower right',fontsize=20)
+        ax.legend(handles=legend_entries,loc='lower right',fontsize=20)
 
     ax.set_title("Classical phase diagraf of $J_h-J_t-J_d$ maple leaf lattice",size=30)
 

@@ -2,6 +2,37 @@ import numpy as np
 from numpy import cos as C
 from numpy import sin as S
 
+def E_kiwi(continuum_pars,*args):
+    discrete_pars, Js = args
+    h,d,t = Js
+    th = continuum_pars
+    ep, n = discrete_pars
+    return 3*(S(th)**2*(2*h*ep*C(n*np.pi/3)+2*t*C(2*n*np.pi/3)+(-1)**n*d*ep)+C(th)**2*(2*h*ep+2*t+d*ep))
+
+def E_banana(continuum_pars,*args):
+    discrete_pars, Js = args
+    h,d,t = Js
+    th, ph = continuum_pars
+    ep, e1, e2 = discrete_pars
+    return -3*d*(C(th)**2+S(th)**2*C(2*ph)) + 6*S(th)*(e2*S(ph)*C(th)*(h*ep+t)+(e1*e2*C(ph)*C(th)+e1*S(th)*C(ph)*S(ph))*(h*ep-t))
+
+def E_mango(continuum_pars,*args):
+    discrete_pars, Js = args
+    h,d,t = Js
+    th, ph, et = continuum_pars
+    ep = discrete_pars[0]
+    return 3*t*C(2*th) + 6*h*ep*(S(th)**2*(C(2*et)*C(2*ph)+S(2*et)*S(2*ph))-C(th)**2) - 3/2*d*ep*(C(th)**2+S(th)**2*(C(2*ph)*(C(2*et)+np.sqrt(3)*S(2*et))+S(2*ph)*(S(2*et)-np.sqrt(3)*C(2*et))))
+
+def get_discrete_index(ind_discrete,ans):
+    if ans == 'kiwi':
+        return ((-1)**(ind_discrete//4),ind_discrete%4)
+    elif ans == 'banana':
+        return ((-1)**(ind_discrete//4),(-1)**(ind_discrete//2),(-1)**(ind_discrete%2))
+    elif ans == 'mango':
+        return ((-1)**(ind_discrete),)
+
+functions_fruit = {'kiwi':E_kiwi, 'banana':E_banana, 'mango':E_mango}
+
 def E_FM(*args):
     h,t,d = args
     return 6*h+6*t+3*d
@@ -141,9 +172,9 @@ def get_which_NonCoplanar(pars):
                 return 2
     return 0
 
-def get_res_cpd_fn(nC,Jh,nn,Jts,Jds):
+def get_res_cpd_fn(Jh,nn,Jds,Jts):
     res_dn = 'results/data_cpd/'
-    return res_dn + 'cp'+nC+'d_'+str(Jh)+'_'+str(nn)+'_'+str(Jts[0])+','+str(Jts[-1])+'_'+str(Jds[0])+','+str(Jds[-1])+'.npy'
+    return res_dn + 'cpd_Jh'+str(Jh)+'_npts'+str(nn)+'_bounds_'+str(Jds[0])+','+str(Jds[-1])+'_'+str(Jts[0])+','+str(Jts[-1])+'.npy'
 
 def get_machine(cwd):
     """Selects the machine the code is running on by looking at the working directory. Supports local, hpc (baobab or yggdrasil) and mafalda.
