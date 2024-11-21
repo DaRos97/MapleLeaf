@@ -13,7 +13,8 @@ import sys,os
 machine = fs.get_machine(os.getcwd())
 
 disp = 0#True if machine=='loc' else False
-plot_PD = 0
+plot_PD = 1
+savefig = 1
 plot_values = 0
 #
 Jh = 1
@@ -89,8 +90,8 @@ if plot_PD:#Plot PD
         colors.append(cmap2(i/(n_colors-1)))
     colors = np.array(colors[:24]).reshape(3,8,4)
 
-    fig,ax = plt.subplots()
-    fig.set_size_inches(20,15)
+    fig = plt.figure(figsize=(10,10))
+    ax = fig.add_subplot()
     #
     list_ind = []
     marker = 's'
@@ -127,12 +128,24 @@ if plot_PD:#Plot PD
 
     ax.legend(handles=legend_entries,loc='lower right',fontsize=20)
 
-    ax.set_title("Classical phase diagraf of $J_h-J_t-J_d$ maple leaf lattice",size=30)
+#    ax.set_title("Classical phase diagraf of $J_h-J_t-J_d$ maple leaf lattice",size=30)
 
-    ax.autoscale(enable=True, axis='x', tight=True)
-    ax.autoscale(enable=True, axis='y', tight=True)
+    ax.set_xlim(Jds[0],Jds[-1])
+    ax.set_ylim(Jts[0],Jts[-1])
+    if Jds[-1]>1:
+        ax.plot([0,0],[Jts[0],Jts[-1]],color='k',lw=1)
+        ax.plot([Jds[0],Jds[-1]],[0,0],color='k',lw=1)
+        ax.scatter(1,1,color='r',marker='o',s=20)
+    ax.set_aspect('equal')
+    fig.tight_layout()
 
-    plt.show()
+    #ax.autoscale(enable=True, axis='x', tight=True)
+    #ax.autoscale(enable=True, axis='y', tight=True)
+    fig.show()
+    if savefig:
+        if input("Save figure?[y/N]")=='y':
+            fig.savefig('results/cpd_'+str(nn)+"_"+"{:.2f}".format(Jds[0]).replace('.',',')+"_"+"{:.2f}".format(Jds[-1]).replace('.',',')+'.png')
+
     exit()
 
 

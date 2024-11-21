@@ -4,34 +4,35 @@ import functions_cpd as fs_cpd
 def get_pars(ind):
     """Here we give the parameters in the phase diagram for the different orders.
     For FM and Neel not really needed.
-    We give: FM, Neel, 2 coplanars (close and far from ) and 3 non-coplanars (one for each region of the classical phase diagram)
+    We give: FM, Neel, 2 coplanars (close and far from (0,0)) and N non-coplanars (one for each region of the classical phase diagram)
     """
-    l_order = [0,1,4,4,6,6,6]
-    l_I = [0,0,5,40,22,25,18]
-    l_J = [0,0,45,47,40,30,23]
-    ind_order = l_order[ind]
-    I = l_I[ind]
-    J = l_J[ind]
+    pars_orders = (
+           [0,0,0,0],  #FM in (-4,-4)
+           [0,,32,24], #Neel in (0,-1)
+           [2,0,40,40], #Coplanar in (1,1)
+           [1,0,16,20], #Non-Coplanar a in (-2,-1.5)
+           [1,4,10,16], #Non-Coplanar b in (-2.75,-2)
+           [1,4,8,25],  #Non-Coplanar b in (-3,-0.875)
+           [1,4,56,39], #Non-Coplanar b in (3,8.75)
+           )
+    ind_order,ind_discrete,ind_d,ind_t = pars_orders[ind]
     #
     Jh = 1
-    nn = 51     #largest phase diagram computed so far
+    nn = 65     #largest phase diagram computed so far
     bound = 4
-    ng = 0
+    ng = 1
     Jds = np.linspace(-bound,bound*ng,nn)
     Jts = np.linspace(-bound,bound*ng,nn)
-
-    order = fs_cpd.name_list['3'][ind_order]
-    print("Computing spin structure factor of",order)
-    if ind_order>1:
-        print("Using parameters at position Jd=","{:.4f}".format(Jds[I])," and Jt=","{:.4f}".format(Jts[J]))
-        pars_fn = fs_cpd.get_res_cpd_fn('3',Jh,nn,Jts,Jds)
-        pars = np.load(pars_fn)
-        args = pars[I,J,ind_order,1:]   #don't take the energy
-        args = args[~np.isnan(args)]    #remove nans
-        print("angle(s): ",args)
-    else:
-        args = (0,)
-    return order, args, Jds[I], Jts[J]
+    #
+    ans = fs_cpd.txt_ansatz[ind_order]
+    print("Computing spin structure factor of",ans)
+    print("Using parameters at position Jd=","{:.4f}".format(Jds[ind_d])," and Jt=","{:.4f}".format(Jts[ind_t]))
+    pars_fn = fs_cpd.get_res_cpd_fn(Jh,nn,Jds,Jts)
+    Energies = np.load(pars_fn)
+    args = Energies[ind_d,ind_t,ind_order,ind_discrete,1:]   #don't take the energy
+    args = args[~np.isnan(args)]    #remove nans
+    print("angle(s): ",args)
+    return ans, args, ind_discrete, Jds[ind_d], Jts[ind_t]
 
 def R_z(theta):
     """
@@ -99,6 +100,46 @@ hexagonal links: 0-1,2-3,4-5
 triangular links: 1-3,3-4,4-1
 dimer links: 1-2,3-5,4-0
 """
+def kiwi_lattice(UC,args,ind_discrete):
+    th = args[0]
+    ep, n = fs_cpd.get_discrete_index(ind_discrete,'kiwi')
+    S = np.array([np.sin(th),0,np.cos(th)])
+    R = ep*np.array([[np.cos(n*np.pi/3),-np.sin(n*np.pi/3),0],[np.sin(n*np.pi/3),np.cos(n*np.pi/3),0],[0,0,1]])
+    T1 = T2 = np.identity(3)
+    return get_lattice(UC,S,R,T1,T2)
+
+def banana_lattice(UC,args,ind_discrete):
+    th,ph = args
+    ep, e1, e2 = fs_cpd.get_discrete_index(ind_discrete,'banana')
+    S = np.array([np.sin(th)*np.cos(ph),np.sin(th)*np.sin(ph),np.cos(th)])
+    R = ep*np.array([[0,e1,0],[0,0,e2],[e1*e2,0,0]])
+    T1 = np.array([[1,0,0],[0,-1,0],[0,0,-1]])
+    T2 = np.array([[-1,0,0],[0,1,0],[0,0,-1]])
+    return get_lattice(UC,S,R,T1,T2)
+
+def mango_lattice(UC,args,ind_discrete):
+    th,ph,et = args
+    ep = fs_cpd.get_discrete_index(ind_discrete,'mango')[0]
+    S = np.array([np.sin(th)*np.cos(ph),np.sin(th)*np.sin(ph),np.cos(th)])
+    R = ep*np.array([[np.cos(2*et),np.sin(2*et),0],[np.sin(2*et),-np.cos(2*et),0],[0,0,-1]])
+    T1 = T2 = 1/2*np.array([[-1,-np.sqrt(3),0],[np.sqrt(3),-1,0],[0,0,1]])
+    return get_lattice(UC,S,R,T1,T2)
+
+def get_lattice(UC,S,R,T1,T2):
+    lattice = np.zeros((UC,UC,6,3))
+    GR_ = []
+    for iUC in range(6):
+        GR_.append(np.linalg.matrix_power(R,iUC))
+    for ix in range(UC):
+        tr1 = np.linalg.matrix_power(T1,ix)
+        for iy in range(UC):
+            tr2 = np.linalg.matrix_power(T2,iy)
+            for iUC in range(6):
+                lattice[ix,iy,iUC] = tr1@tr2@GR_[iUC]@S
+    return lattice
+
+fruit_lattice = {'kiwi':kiwi_lattice,'banana':banana_lattice,'mango':mango_lattice}
+
 def FM(UC,args):
     lattice = np.zeros((UC,UC,6,3))
     lattice[:,:,:,2] = 1/2
@@ -147,11 +188,11 @@ def noncoplanar_1(UC,args):
 
 lattice_functions = {'FM':FM,'Neel':Neel,'Coplanar':coplanar, 'Non-Coplanar Ico':noncoplanar_1}
 
-def get_spec_txt(order,Jd,Jt,UC,nkx,nky):
-    return order+'_'+"{:.4f}".format(Jd)+"{:.4f}".format(Jt)+'_'+str(UC)+'_'+str(nkx)+'_'+str(nky)
+def get_spec_txt(order,ind_discrete,Jd,Jt,UC,nkx,nky):
+    return order+str(ind_discrete)+'_'+"{:.4f}".format(Jd)+"{:.4f}".format(Jt)+'_'+str(UC)+'_'+str(nkx)+'_'+str(nky)
 
-def get_ssf_fn(direction,order,Jd,Jt,UC,nkx,nky):
-    return 'results/data_ssf/'+direction+'_'+get_spec_txt(order,Jd,Jt,UC,nkx,nky)+'.npy'
+def get_ssf_fn(direction,order,ind_discrete,Jd,Jt,UC,nkx,nky):
+    return 'results/data_ssf/'+direction+'_'+get_spec_txt(order,ind_discrete,Jd,Jt,UC,nkx,nky)+'.npy'
 
 def plot_BZs(ax):
     #hexagons
