@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
-import functions_cpd as fs
-import functions_visual as fsv
+import functions_cpd as fs_cpd
+import functions_visual as fs_vis
 import functions_ssf as fs_ssf
 import sys
 from mpl_toolkits.mplot3d import Axes3D
@@ -11,7 +11,7 @@ import matplotlib.cm as cm
 import matplotlib.gridspec as gridspec
 
 index = 0 if len(sys.argv)<2 else int(sys.argv[1])  #
-name, args_solution, ind_discrete, Jd, Jt = fs_ssf.get_pars(index)
+ans, args_solution, ind_discrete, Jd, Jt = fs_ssf.get_pars(index)
 
 fig = plt.figure(figsize=(15,10))
 
@@ -25,7 +25,7 @@ c = 'k'
 ls = 'solid'
 x = np.sqrt(3)/2
 args = (x,lw,c,ls)
-fsv.plot_lattice(ax,*args)
+fs_vis.plot_lattice(ax,*args)
 ax.axis('off')
 
 #Plot unit cell spins
@@ -44,26 +44,26 @@ offset = np.array([2*x,1])
 marker = 'o'
 size = 100
 
-if name=='kiwi':
+if ans=='kiwi':
     UC = 1
     center_x,center_y = offset+T1+T2
-    hexagon = RegularPolygon((center_x, center_y), numVertices=6, radius=1.5, orientation=0, color='gray',alpha=0.5,zorder=0) 
+    hexagon = RegularPolygon((center_x, center_y), numVertices=6, radius=1.5, orientation=0, color='gray',alpha=0.5,zorder=0)
     ax.add_patch(hexagon)
-elif name=='banana':
+elif ans=='banana':
     UC = 4
     for i in range(2):
         for j in range(2):
             center_x,center_y = offset+i*T1+j*T2
-            hexagon = RegularPolygon((center_x, center_y), numVertices=6, radius=1.5, orientation=0, color='gray',alpha=0.5,zorder=0) 
+            hexagon = RegularPolygon((center_x, center_y), numVertices=6, radius=1.5, orientation=0, color='gray',alpha=0.5,zorder=0)
             ax.add_patch(hexagon)
-elif name=='mango':
+elif ans=='mango':
     UC = 9
     for i in range(2):
         for j in range(2):
             if i==1 and j==0:
                 continue
             center_x,center_y = offset+i*T1+j*T2
-            hexagon = RegularPolygon((center_x, center_y), numVertices=6, radius=1.5, orientation=0, color='gray',alpha=0.5,zorder=0) 
+            hexagon = RegularPolygon((center_x, center_y), numVertices=6, radius=1.5, orientation=0, color='gray',alpha=0.5,zorder=0)
             ax.add_patch(hexagon)
 
 #Sphere
@@ -100,7 +100,7 @@ cmap2 = plt.get_cmap('tab20b')
 n_colors = cmap2.N
 for i in range(n_colors):
     colors.append(cmap2(i/(n_colors-1)))
-#
+#   Colored dots in grid
 if index==0:    #FM
     c = colors[0]
     for x in range(3):
@@ -110,7 +110,8 @@ if index==0:    #FM
                 X = T1*i_UC[i][0] + T2*i_UC[i][1] + off
                 ax.scatter(X[0],X[1],color=c, lw=0, marker=marker, s=size) 
     #Sphere arrows
-    theta_arrow = 0
+    theta_arrow = args_solution
+#    theta_arrow = 0
     phi_arrow = 0
     x_arrow = np.sin(theta_arrow) * np.cos(phi_arrow)
     y_arrow = np.sin(theta_arrow) * np.sin(phi_arrow)
@@ -130,7 +131,7 @@ elif index==1:  #Neel
                 ax.scatter(X[0],X[1],color=c[i%2], lw=0, marker=marker, s=size)
     #Sphere arrows
     for i in range(2):
-        theta_arrow = np.pi*i
+        theta_arrow = args_solution + np.pi*i
         phi_arrow = 0
         x_arrow = np.sin(theta_arrow) * np.cos(phi_arrow)
         y_arrow = np.sin(theta_arrow) * np.sin(phi_arrow)
@@ -140,7 +141,7 @@ elif index==1:  #Neel
     suptitle = 'Neel'
     #View
     ax2.view_init(30,50)
-elif name == 'mango':   #coplanar
+elif ans == 'mango':   #coplanar
     c1 = colors[:6]
     ind_c = [1,0,3,2,4,5]   #dark magic, don't touch it
     for x in range(3):
@@ -152,7 +153,7 @@ elif name == 'mango':   #coplanar
                 ax.scatter(X[0],X[1],color=color, lw=0, marker=marker, s=size)
     #Sphere arrows
     th,ph,et = args_solution
-    ep = fs.get_discrete_index(ind_discrete,name)
+    ep = fs_cpd.get_discrete_index(ind_discrete,ans)
     S1 = np.array([np.sin(th)*np.cos(ph),np.sin(th)*np.sin(ph),np.cos(th)])
     #######################################################################################
     #######################################################################################
@@ -173,14 +174,14 @@ elif name == 'mango':   #coplanar
     ax2.plot(x_al, y_al, z_al, color='k', linewidth=1)
     ax2.text(x_al[50]+0., y_al[50]+0.1, 0.1,r'$\Delta\phi$', color='k')
     #
-    title = name
+    title = ans
     #View
     ax2.view_init(30,50)
 
     suptitle = title+' order at '+r'$J_d=$'+"{:.2f}".format(Jd)+', '+r'$J_t=$'+"{:.2f}".format(Jt)
-elif name == 'banana':
+elif ans == 'banana':
     th,ph = args_solution
-    ep,e1,e2 = fs.get_discrete_index(ind_discrete,name)
+    ep,e1,e2 = fs_cpd.get_discrete_index(ind_discrete,ans)
     S1 = np.array([np.sin(th)*np.cos(ph),np.sin(th)*np.sin(ph),np.cos(th)])
     GR6 = ep*np.array([[0,e1,0],[0,0,e2],[e1*e2,0,0]])
     GT1 = np.array([[1,0,0],[0,-1,0],[0,0,-1]])
@@ -227,17 +228,15 @@ elif name == 'banana':
     suptitle = title +' order at '+r'$J_d=$'+"{:.2f}".format(Jd)+', '+r'$J_t=$'+"{:.2f}".format(Jt)
 
 if 1:#SSF
-    order = name
-    UC = 72
-    factors = (6,10)    #Just how many units to consider 
-    nkx, nky = fs_ssf.get_kpoints(factors,150)
+    UC = 71
+    fx,fy = (6,10)    #Just how many units to consider 
+    nkx, nky = fs_ssf.get_kpoints((fx,fy),150)
     vecx = np.pi*2/np.sqrt(21)#fs.B_[1,0] if high_symm=='B' else fs.b_[1,0]
     vecy = np.pi*2/3/np.sqrt(7)#fs.B_[1,1]/3 if high_symm=='B' else fs.b_[1,1]/3
-    fx,fy = factors
     kxs = np.linspace(-vecx*fx,vecx*fx,nkx)
     kys = np.linspace(-vecy*fy,vecy*fy,nky)
-    SSFzz_fn = fs_ssf.get_ssf_fn('zz',order,ind_discrete,Jd,Jt,UC,nkx,nky)
-    SSFxy_fn = fs_ssf.get_ssf_fn('xy',order,ind_discrete,Jd,Jt,UC,nkx,nky)
+    SSFzz_fn = fs_ssf.get_ssf_fn('zz',ans,ind_discrete,Jd,Jt,UC,nkx,nky)
+    SSFxy_fn = fs_ssf.get_ssf_fn('xy',ans,ind_discrete,Jd,Jt,UC,nkx,nky)
     print(SSFzz_fn)
     if Path(SSFzz_fn).is_file():
         SSFzz = np.load(SSFzz_fn)
@@ -271,7 +270,7 @@ if 1:#SSF
 fig.tight_layout()
 fig.show()
 if input("Save?[y/N]")=='y':
-    fig.savefig('results/fig_'+name+str(ind_discrete)+'_'+str(index)+'.png')
+    fig.savefig('results/fig_'+ans+str(ind_discrete)+'_'+str(index)+'.png')
 #plt.show()
 
 

@@ -6,14 +6,14 @@ def get_pars(ind):
     For FM and Neel not really needed.
     We give: FM, Neel, 2 coplanars (close and far from (0,0)) and N non-coplanars (one for each region of the classical phase diagram)
     """
-    pars_orders = (
+    pars_orders = ( #for pd with 65x65 grid between -4 and 4
            [0,0,0,0],  #FM in (-4,-4)
-           [0,,32,24], #Neel in (0,-1)
+           [0,3,32,24], #Neel in (0,-1)
            [2,0,40,40], #Coplanar in (1,1)
            [1,0,16,20], #Non-Coplanar a in (-2,-1.5)
            [1,4,10,16], #Non-Coplanar b in (-2.75,-2)
            [1,4,8,25],  #Non-Coplanar b in (-3,-0.875)
-           [1,4,56,39], #Non-Coplanar b in (3,8.75)
+           [1,4,56,39], #Non-Coplanar b in (3,0.875)
            )
     ind_order,ind_discrete,ind_d,ind_t = pars_orders[ind]
     #
@@ -32,6 +32,7 @@ def get_pars(ind):
     args = Energies[ind_d,ind_t,ind_order,ind_discrete,1:]   #don't take the energy
     args = args[~np.isnan(args)]    #remove nans
     print("angle(s): ",args)
+    print("Discrete parameters: ",fs_cpd.get_discrete_index(ind_discrete,ans))
     return ans, args, ind_discrete, Jds[ind_d], Jts[ind_t]
 
 def R_z(theta):

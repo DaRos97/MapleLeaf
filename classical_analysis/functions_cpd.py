@@ -10,6 +10,7 @@ def E_kiwi(continuum_pars,*args):
     return 3*(S(th)**2*(2*h*ep*C(n*np.pi/3)+2*t*C(2*n*np.pi/3)+(-1)**n*d*ep)+C(th)**2*(2*h*ep+2*t+d*ep))
 
 def E_kiwi2(continuum_pars,*args):
+    """Energy of kiwi configuration using the definition of the RMO to construct the bonds' energies."""
     discrete_pars, Js = args
     h,d,t = Js
     th = continuum_pars
@@ -30,6 +31,7 @@ def E_banana(continuum_pars,*args):
     return -3*d*(C(th)**2+S(th)**2*C(2*ph)) + 6*S(th)*(e2*S(ph)*C(th)*(h*ep+t)+(e1*e2*C(ph)*C(th)+e1*S(th)*C(ph)*S(ph))*(h*ep-t))
 
 def E_banana2(continuum_pars,*args):
+    """Energy of kiwi configuration using the definition of the RMO to construct the bonds' energies."""
     discrete_pars, Js = args
     h,d,t = Js
     th, ph = continuum_pars
@@ -51,6 +53,7 @@ def E_mango(continuum_pars,*args):
     return 3*t*C(2*th) + 6*h*ep*(S(th)**2*(C(2*et)*C(2*ph)+S(2*et)*S(2*ph))-C(th)**2) - 3/2*d*ep*(C(th)**2+S(th)**2*(C(2*ph)*(C(2*et)+np.sqrt(3)*S(2*et))+S(2*ph)*(S(2*et)-np.sqrt(3)*C(2*et))))
 
 def E_mango2(continuum_pars,*args):
+    """Energy of kiwi configuration using the definition of the RMO to construct the bonds' energies."""
     discrete_pars, Js = args
     h,d,t = Js
     th, ph, et = continuum_pars

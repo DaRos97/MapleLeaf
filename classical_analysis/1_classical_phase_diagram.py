@@ -18,11 +18,12 @@ savefig = 1
 plot_values = 0
 #
 Jh = 1
-nn = 65
+nn = 65     #points in PD
 bound = 4
 ng = 1  #0 or 1, gives the upper bound
-Jds = np.linspace(-bound,bound*ng,nn)
-Jts = np.linspace(-bound,bound*ng,nn)
+ng0 = 0  #0 or 1, gives the upper bound
+Jds = np.linspace(-bound*ng0,bound*ng,nn)
+Jts = np.linspace(-bound*ng0,bound*ng,nn)
 
 res_fn = fs.get_res_cpd_fn(Jh,nn,Jds,Jts)
 
@@ -126,7 +127,7 @@ if plot_PD:#Plot PD
                               markerfacecolor=colors[ind[0],ind[1]], markersize=15)
                               )
 
-    ax.legend(handles=legend_entries,loc='lower right',fontsize=20)
+    ax.legend(handles=legend_entries,loc='upper left',fontsize=20)
 
 #    ax.set_title("Classical phase diagraf of $J_h-J_t-J_d$ maple leaf lattice",size=30)
 
