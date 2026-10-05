@@ -1,64 +1,46 @@
 import numpy as np
 import sys, os
-import functions_MF as fs
+import functions_MF as fs_mf
+import functions_ssf as fs_ssf
 
-order = 'NonCoplanar2'        #one of the clasical orders
+ind_choice = 0 if len(sys.argv)<2 else int(sys.argv[1])
+ans, args, ind_discrete, Jd, Jt = fs_ssf.get_pars(ind_choice)
 
-print("Computing LRO ",order)
-
-if order[:-1] == 'Coplanar':
-    print("alpha: ",fs.alpha_,'\n')
-if order[:-1] == 'NonCoplanar':
-    print("theta: ",fs.theta_)
-    print("phi: ",fs.phi_,'\n')
-
+#args = [-np.pi/2,]
+lattice = fs_ssf.fruit_lattice[ans](3,args,ind_discrete)/2
 
 list_op_loop = [
-        ['a','alpha'],['b','alpha'],['c','alpha'],['d','alpha'],['e','alpha'],
-        ['a','beta'],['b','beta'],['c','beta1'],['c','beta2'],['d','beta1'],['d','beta2'],['e','beta'],
-        ['i','beta'],['j','beta'],['e','gamma'],['f','gamma'],
+        ['L1','alpha'],['L1','beta'],['L2','alpha'],['L2','beta'],['L3','alpha'],['L3','beta']
         ]
 
 res = {}
 for loop,type_op in list_op_loop:
-    if not type_op in res.keys():
+    if not type_op in res.keys():   #initiate new dic
         res[type_op] = {}
-    pr = True if (type_op == 'beta1' and loop in ['c','d'] and 0) else False
-    res[type_op][loop] = fs.compute_loop(loop,type_op,order,pr)
+    disp = False
+    res[type_op][loop] = fs_mf.compute_loop(loop,type_op,ans,lattice,disp)
     #
-    if pr:
-        print(loop,': ',type_op)
-        print(res[type_op][loop])
-        input()
 
 
 
-print('Ah: ',fs.Ah(res,order))
-print('Ahp: ',fs.Ahp(res,order))
-print('At: ',fs.At(res,order))
-print('Atp: ',fs.Atp(res,order))
-print('Ad: ',fs.Ad(res,order))
+print('Ah: ',fs_mf.Ah(res))
+print('At: ',fs_mf.At(res))
+print('Ad: ',fs_mf.Ad(res))
 
 print('-----')
 
-print('Bh: ',fs.Bh(res,order))
-print('Bhp: ',fs.Bhp(res,order))
-print('Bt: ',fs.Bt(res,order))
-print('Btp: ',fs.Btp(res,order))
-print('Bd: ',fs.Bd(res,order))
+print('Bh: ',fs_mf.Bh(res))
+print('Bt: ',fs_mf.Bt(res))
+print('Bd: ',fs_mf.Bd(res))
+exit()
 
 print('--------------------------------------')
-
-print('phi_h: ',fs.phi_h(res,order))
-print('phi_hp: ',fs.phi_hp(res,order))
-print('phi_t: ',fs.phi_t(res,order))
-print('phi_tp: ',fs.phi_tp(res,order))
-print('phi_d: ',fs.phi_d(res,order))
+print('phi_h: ',fs_mf.phi_h(res,ans))
+print('phi_t: ',fs_mf.phi_t(res,ans))
+print('phi_d: ',fs_mf.phi_d(res,ans))
 
 print('-----')
 
-print('psi_h: ',fs.psi_h(res,order))
-print('psi_hp: ',fs.psi_hp(res,order))
-print('psi_t: ',fs.psi_t(res,order))
-print('psi_tp: ',fs.psi_tp(res,order))
-print('psi_d: ',fs.psi_d(res,order))
+print('psi_h: ',fs_mf.psi_h(res,ans))
+print('psi_t: ',fs_mf.psi_t(res,ans))
+print('psi_d: ',fs_mf.psi_d(res,ans))

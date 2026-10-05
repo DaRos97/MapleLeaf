@@ -105,6 +105,7 @@ def kiwi_lattice(UC,args,ind_discrete):
     th = args[0]
     ep, n = fs_cpd.get_discrete_index(ind_discrete,'kiwi')
     S = np.array([np.sin(th),0,np.cos(th)])
+#    S = R_z3(1.2)@S
     R = ep*np.array([[np.cos(n*np.pi/3),-np.sin(n*np.pi/3),0],[np.sin(n*np.pi/3),np.cos(n*np.pi/3),0],[0,0,1]])
     T1 = T2 = np.identity(3)
     return get_lattice(UC,S,R,T1,T2)
